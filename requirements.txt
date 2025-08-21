@@ -1,0 +1,11 @@
+# requirements.txt
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+numpy
+sentence-transformers
+scikit-learn
+python-dotenv
+pydantic-settings
+pytest
