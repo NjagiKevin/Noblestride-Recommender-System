@@ -1,7 +1,6 @@
 from typing import Dict, List
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-# from app.db.session import DB
 import numpy as np
 from app.models.schemas import BusinessCreate, InvestorCreate
 from app.db.session import SessionLocal
