@@ -9,4 +9,5 @@ scikit-learn
 python-dotenv
 pydantic-settings
 apache-airflow
+psycopg2
 
