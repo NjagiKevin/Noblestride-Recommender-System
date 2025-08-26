@@ -7,6 +7,7 @@ businesses: Dict[str, BusinessCreate] = {}
 investors: Dict[str, InvestorCreate] = {}
 vectorizer = TextVectorizer()
 
+
 def add_business(business: BusinessCreate) -> BusinessResponse:
     business_id = f"biz_{len(businesses)+1}"
     businesses[business_id] = business
