@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
     DB_NAME: str
-    DB_HOST: str = "db"
+    DB_HOST: str
     DB_PORT: str = "5432"
     DATABASE_URL: str | None = None
     API_KEY: str = "default_key"
