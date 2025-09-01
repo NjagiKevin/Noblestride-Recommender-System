@@ -3,6 +3,8 @@ from app.api.api_router import api_router
 from app.core.config import settings
 from app.core.logging_config import configure_logging
 from app.db.session import init_db
+from app.db.base import Base
+from app.db.session import engine
 
 # Configure logging
 configure_logging()
@@ -33,3 +35,6 @@ def health():
         "service": getattr(settings, "APP_NAME", "recommender"),
         "version": getattr(settings, "APP_VERSION", "0.1.0"),
     }
+
+# create tables if they don’t exist
+Base.metadata.create_all(bind=engine)# create tables if they don’t exist
