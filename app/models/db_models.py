@@ -1,5 +1,5 @@
 # app/models/db_models.py
-from sqlalchemy import Column, String, Float, JSON
+from sqlalchemy import Column, String, Float, JSON, UniqueConstraint
 from app.db.session import Base
 
 class Business(Base):
@@ -22,7 +22,9 @@ class Business(Base):
     core_service = Column(String)
     target_clients = Column(JSON)
     portfolio_keywords = Column(JSON)
-
+    __table_args__ = (
+        UniqueConstraint("legal_name", "location", name="uq_business_name_location"),
+    )
 
 class Investor(Base):
     __tablename__ = "investors"

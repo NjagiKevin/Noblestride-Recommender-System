@@ -9,10 +9,12 @@ from app.db.session import get_db
 router = APIRouter(prefix="/businesses", tags=["businesses"])
 
 
-
 # ---- CREATE ----
-@router.post("/", response_model=BusinessResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=BusinessResponse, status_code=status.HTTP_201_CREATED) 
 def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
+    existing_business = db.query(Business).filter(Business.id == business.id).first()
+    if existing_business:
+        raise HTTPException(status_code=409, detail="Business with this ID already exists")
     db_business = Business(**business.dict())
     db.add(db_business)
     db.commit()

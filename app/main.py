@@ -22,6 +22,10 @@ def on_startup():
 # Register routers
 app.include_router(api_router)
 
+@app.get("/")
+def root():
+    return {"message": "Welcome to the Investor–Business Recommender Service!"}
+
 @app.get("/health")
 def health():
     return {
