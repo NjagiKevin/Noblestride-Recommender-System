@@ -11,21 +11,37 @@ router = APIRouter(prefix="/businesses", tags=["businesses"])
 
 
 # ---- CREATE ----
-@router.post("/", response_model=BusinessResponse, status_code=status.HTTP_201_CREATED) 
+@router.post("/", response_model=BusinessRead)
 def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
-    db_business = Business(**business.dict())
-    db.add(db_business)
+    # First check if business already exists
+    existing = db.query(Business).filter(
+        Business.legal_name == business.legal_name,
+        Business.location == business.location
+    ).first()
+
+    if existing:
+        # ✅ Return the existing one (instead of failing)
+        return existing
+
+    # If not found, attempt to insert
+    new_business = Business(**business.dict())
+    db.add(new_business)
+
     try:
         db.commit()
-        db.refresh(db_business)
+        db.refresh(new_business)
+        return new_business
     except IntegrityError:
         db.rollback()
-        raise HTTPException(
-            status_code=409,
-            detail="Business with this legal name and location already exists"
-        )
-    return db_business
-
+        # ✅ If DB rejects it (unique constraint violation),
+        #    fetch & return the existing business anyway
+        existing = db.query(Business).filter(
+            Business.legal_name == business.legal_name,
+            Business.location == business.location
+        ).first()
+        if existing:
+            return existing
+        raise HTTPException(status_code=400, detail="Could not create business")
 
 # ---- READ ALL ----
 @router.get("/", response_model=List[BusinessResponse])
@@ -35,7 +51,7 @@ def get_all_businesses(db: Session = Depends(get_db)):
 
 # ---- READ ONE ----
 @router.get("/{business_id}", response_model=BusinessResponse)
-def get_business_by_id(business_id: str, db: Session = Depends(get_db)):
+def get_business_by_id(business_id: int, db: Session = Depends(get_db)):
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
