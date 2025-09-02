@@ -11,7 +11,7 @@ router = APIRouter(prefix="/businesses", tags=["businesses"])
 
 
 # ---- CREATE ----
-@router.post("/", response_model=BusinessRead)
+@router.post("/", response_model=BusinessResponse)
 def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
     # First check if business already exists
     existing = db.query(Business).filter(
@@ -61,10 +61,7 @@ def get_business_by_id(business_id: int, db: Session = Depends(get_db)):
 # ---- UPDATE ----
 @router.put("/{business_id}", response_model=BusinessResponse)
 def update_business(business_id: str, business_update: BusinessCreate, db: Session = Depends(get_db)):
-    business = db.query(Business).filter(Business.id == business_id).first()
-    if not business:
-        raise HTTPException(status_code=404, detail="Business not found")
-
+                                                                                             
     for field, value in business_update.dict().items():
         setattr(business, field, value)
 
