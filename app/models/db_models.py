@@ -1,11 +1,11 @@
 # app/models/db_models.py
-from sqlalchemy import Column, Integer,String, Float, JSON, UniqueConstraint
+from sqlalchemy import Column,String, Float, JSON, UniqueConstraint
 from app.db.session import Base
 
 class Business(Base):
     __tablename__ = "businesses"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String, primary_key=True, index=True)
     legal_name = Column(String,nullable=False, index=True)
     sector = Column(String,nullable=True )
     industry = Column(String,nullable=True)

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List
 from sqlalchemy.exc import IntegrityError
 from app.models.db_models import Business
-from app.models.schemas import BusinessCreate, BusinessResponse, UpsertResponse
+from app.models.schemas import BusinessCreate, BusinessResponse, UpsertResponse, BusinessRead
 from app.db.session import get_db
 
 
