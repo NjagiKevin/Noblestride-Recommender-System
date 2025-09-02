@@ -1,6 +1,8 @@
 from typing import Dict, List
 from app.models.schemas import BusinessCreate, BusinessResponse, InvestorCreate, InvestorResponse
-from app.services.embeddings import generate_embeddings, rebuild_vector_index, TextVectorizer
+from app.services.embeddings import TextVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
 # In-memory storage for demo
 businesses: Dict[str, BusinessCreate] = {}
@@ -11,45 +13,74 @@ vectorizer = TextVectorizer()
 def add_business(business: BusinessCreate) -> BusinessResponse:
     business_id = f"biz_{len(businesses)+1}"
     businesses[business_id] = business
-    vectorizer.update_business(business_id, business)
+    # vectorizer.update_business(business_id, business) # This method does not exist
     return BusinessResponse(id=business_id, **business.dict())
+
 
 def add_investor(investor: InvestorCreate) -> InvestorResponse:
     investor_id = f"inv_{len(investors)+1}"
     investors[investor_id] = investor
-    vectorizer.update_investor(investor_id, investor)
+    # vectorizer.update_investor(investor_id, investor) # This method does not exist
     return InvestorResponse(id=investor_id, **investor.dict())
+
 
 def update_business(business_id: str, business: BusinessCreate) -> BusinessResponse:
     if business_id not in businesses:
         raise ValueError("Business not found")
     businesses[business_id] = business
-    vectorizer.update_business(business_id, business)
+    # vectorizer.update_business(business_id, business) # This method does not exist
     return BusinessResponse(id=business_id, **business.dict())
+
 
 def update_investor(investor_id: str, investor: InvestorCreate) -> InvestorResponse:
     if investor_id not in investors:
         raise ValueError("Investor not found")
     investors[investor_id] = investor
-    vectorizer.update_investor(investor_id, investor)
+    # vectorizer.update_investor(investor_id, investor) # This method does not exist
     return InvestorResponse(id=investor_id, **investor.dict())
+
 
 def generate_rankings(investor_id: str, top_n: int = 5) -> List[dict]:
     if investor_id not in investors:
         raise ValueError("Investor not found")
-    
+
     investor = investors[investor_id]
+    investor_text = f"{investor.fund_name} {' '.join(investor.sector_prefs)} {investor.mandate_text or ''}"
+    investor_embedding = vectorizer.vectorize_text(investor_text)
+
     scores = []
-    
+
     for biz_id, business in businesses.items():
-        # Simple matching logic (to be enhanced)
-        industry_match = 1 if business.industry in investor.preferred_industries else 0
-        description_sim = vectorizer.calculate_similarity(
-            investor_id, 
-            biz_id
-        )
+        business_text = f"{business.legal_name} {business.sector} {business.location} {business.description or ''}"
+        business_embedding = vectorizer.vectorize_text(business_text)
+        
+        industry_match = 1 if business.industry in investor.sector_prefs else 0
+        
+        description_sim = cosine_similarity([investor_embedding], [business_embedding])[0][0]
+        
         score = (industry_match * 0.6) + (description_sim * 0.4)
         scores.append({"business_id": biz_id, "match_score": score})
+
+    ranked = sorted(scores, key=lambda x: x["match_score"], reverse=True)
+    return ranked[:top_n]
+
+
+def recommend_investors_for_business(business: BusinessCreate, top_n: int = 5) -> List[dict]:
+    business_text = f"{business.legal_name} {business.sector} {business.location} {business.description or ''}"
+    business_embedding = vectorizer.vectorize_text(business_text)
     
+    scores = []
+
+    for inv_id, investor in investors.items():
+        investor_text = f"{investor.fund_name} {' '.join(investor.sector_prefs)} {investor.mandate_text or ''}"
+        investor_embedding = vectorizer.vectorize_text(investor_text)
+
+        industry_match = 1 if business.industry in investor.sector_prefs else 0
+        
+        description_sim = cosine_similarity([business_embedding], [investor_embedding])[0][0]
+        
+        score = (industry_match * 0.6) + (description_sim * 0.4)
+        scores.append({"investor_id": inv_id, "match_score": score})
+
     ranked = sorted(scores, key=lambda x: x["match_score"], reverse=True)
     return ranked[:top_n]
