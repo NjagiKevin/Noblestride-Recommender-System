@@ -6,7 +6,7 @@ class Business(Base):
     __tablename__ = "businesses"
 
     id = Column(Integer, primary_key=True, index=True)
-    legal_name = Column(String,nullable=False, unique=True, index=True)
+    legal_name = Column(String,nullable=False, index=True)
     sector = Column(String,nullable=True )
     industry = Column(String,nullable=True)
     location = Column(String, nullable=False)
@@ -23,9 +23,9 @@ class Business(Base):
     target_clients = Column(JSON)
     portfolio_keywords = Column(JSON)
     __table_args__ = (
-        UniqueConstraint("legal_name", "location", name="uq_business_name_location"),
-    )
-
+    UniqueConstraint("legal_name", "location", name="uq_business_name_location"),
+)
+   
 class Investor(Base):
     __tablename__ = "investors"
 
