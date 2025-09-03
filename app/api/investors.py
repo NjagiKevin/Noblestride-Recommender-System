@@ -2,6 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from sqlalchemy.exc import IntegrityError
 
 from app.models.db_models import Investor
 from app.models.schemas import InvestorCreate, InvestorResponse, UpsertResponse
@@ -13,12 +14,31 @@ router = APIRouter(prefix="/investors", tags=["investors"])
 # ---- CREATE ----
 @router.post("/", response_model=InvestorResponse, status_code=status.HTTP_201_CREATED)
 def create_investor(investor: InvestorCreate, db: Session = Depends(get_db)):
+    # First check if investor already exists
+    existing_investor = db.query(Investor).filter(Investor.id == investor.id).first()
+
+    if existing_investor:
+        # If investor exists, add to in-memory and return
+        add_investor(investor)
+        return existing_investor
+
+    # If not found, attempt to insert
     db_investor = Investor(**investor.dict())
     db.add(db_investor)
-    db.commit()
-    db.refresh(db_investor)
-    add_investor(investor)
-    return db_investor
+
+    try:
+        db.commit()
+        db.refresh(db_investor)
+        add_investor(investor)
+        return db_investor
+    except IntegrityError:
+        db.rollback()
+        # This case handles rare race conditions
+        existing_investor = db.query(Investor).filter(Investor.id == investor.id).first()
+        if existing_investor:
+            add_investor(investor)
+            return existing_investor
+        raise HTTPException(status_code=400, detail="Could not create investor")
 
 # ---- READ ALL ----
 @router.get("/", response_model=List[InvestorResponse])

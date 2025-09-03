@@ -31,6 +31,10 @@ def update_investor(investor_id: str, investor: InvestorCreate):
 
 
 def generate_rankings(investor_id: str, top_n: int = 5) -> List[dict]:
+    print(f"--- Generating recommendations for investor: {investor_id} ---")
+    print(f"Current investors in memory: {list(investors.keys())}")
+    print(f"Current businesses in memory: {list(businesses.keys())}")
+
     if investor_id not in investors:
         raise ValueError("Investor not found")
 
@@ -49,9 +53,15 @@ def generate_rankings(investor_id: str, top_n: int = 5) -> List[dict]:
         description_sim = cosine_similarity([investor_embedding], [business_embedding])[0][0]
         
         score = (industry_match * 0.6) + (description_sim * 0.4)
+        
+        print(f"  - Business: {biz_id}, Industry Match: {industry_match}, Similarity: {description_sim:.4f}, Final Score: {score:.4f}")
+        
         scores.append({"business_id": biz_id, "match_score": score})
 
     ranked = sorted(scores, key=lambda x: x["match_score"], reverse=True)
+    
+    print(f"--- Ranking complete. Found {len(ranked)} potential matches. ---")
+    
     return ranked[:top_n]
 
 
