@@ -15,14 +15,15 @@ router = APIRouter(prefix="/businesses", tags=["businesses"])
 @router.post("/", response_model=BusinessResponse)
 def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
     # First check if business already exists
-    existing = db.query(Business).filter(
+    existing_business = db.query(Business).filter(
         Business.legal_name == business.legal_name,
         Business.location == business.location
     ).first()
 
-    if existing:
-        # ✅ Return the existing one (instead of failing)
-        return existing
+    if existing_business:
+        # If business exists, add to in-memory and return
+        add_business(business)
+        return existing_business
 
     # If not found, attempt to insert
     new_business = Business(**business.dict())
@@ -35,14 +36,14 @@ def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
         return new_business
     except IntegrityError:
         db.rollback()
-        # ✅ If DB rejects it (unique constraint violation),
-        #    fetch & return the existing business anyway
-        existing = db.query(Business).filter(
+        # This case handles rare race conditions
+        existing_business = db.query(Business).filter(
             Business.legal_name == business.legal_name,
             Business.location == business.location
         ).first()
-        if existing:
-            return existing
+        if existing_business:
+            add_business(business)
+            return existing_business
         raise HTTPException(status_code=400, detail="Could not create business")
 
 # ---- READ ALL ----
