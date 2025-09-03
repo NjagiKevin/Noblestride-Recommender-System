@@ -3,7 +3,6 @@ from app.api.api_router import api_router
 from app.core.config import settings
 from app.core.logging_config import configure_logging
 from app.db.session import init_db
-from app.db.seed import seed_data
 from app.db.base import Base
 from app.db.session import engine
 
@@ -21,7 +20,6 @@ app = FastAPI(
 @app.on_event("startup")
 def on_startup():
     init_db()  # this will call Base.metadata.create_all(bind=engine)
-    seed_data()
 
 # Register routers
 app.include_router(api_router)
