@@ -6,6 +6,7 @@ from typing import List
 from app.models.db_models import Investor
 from app.models.schemas import InvestorCreate, InvestorResponse, UpsertResponse
 from app.db.session import get_db
+from app.services.recommender import add_investor
 
 router = APIRouter(prefix="/investors", tags=["investors"])
 
@@ -16,6 +17,7 @@ def create_investor(investor: InvestorCreate, db: Session = Depends(get_db)):
     db.add(db_investor)
     db.commit()
     db.refresh(db_investor)
+    add_investor(investor)
     return db_investor
 
 # ---- READ ALL ----

@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from app.models.db_models import Business
 from app.models.schemas import BusinessCreate, BusinessResponse, UpsertResponse
 from app.db.session import get_db
+from app.services.recommender import add_business
 
 
 router = APIRouter(prefix="/businesses", tags=["businesses"])
@@ -30,6 +31,7 @@ def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
     try:
         db.commit()
         db.refresh(new_business)
+        add_business(business)
         return new_business
     except IntegrityError:
         db.rollback()

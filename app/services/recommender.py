@@ -10,34 +10,24 @@ investors: Dict[str, InvestorCreate] = {}
 vectorizer = TextVectorizer()
 
 
-def add_business(business: BusinessCreate) -> BusinessResponse:
-    business_id = f"biz_{len(businesses)+1}"
-    businesses[business_id] = business
-    # vectorizer.update_business(business_id, business) # This method does not exist
-    return BusinessResponse(id=business_id, **business.dict())
+def add_business(business: BusinessCreate):
+    businesses[business.id] = business
 
 
-def add_investor(investor: InvestorCreate) -> InvestorResponse:
-    investor_id = f"inv_{len(investors)+1}"
-    investors[investor_id] = investor
-    # vectorizer.update_investor(investor_id, investor) # This method does not exist
-    return InvestorResponse(id=investor_id, **investor.dict())
+def add_investor(investor: InvestorCreate):
+    investors[investor.id] = investor
 
 
-def update_business(business_id: str, business: BusinessCreate) -> BusinessResponse:
+def update_business(business_id: str, business: BusinessCreate):
     if business_id not in businesses:
         raise ValueError("Business not found")
     businesses[business_id] = business
-    # vectorizer.update_business(business_id, business) # This method does not exist
-    return BusinessResponse(id=business_id, **business.dict())
 
 
-def update_investor(investor_id: str, investor: InvestorCreate) -> InvestorResponse:
+def update_investor(investor_id: str, investor: InvestorCreate):
     if investor_id not in investors:
         raise ValueError("Investor not found")
     investors[investor_id] = investor
-    # vectorizer.update_investor(investor_id, investor) # This method does not exist
-    return InvestorResponse(id=investor_id, **investor.dict())
 
 
 def generate_rankings(investor_id: str, top_n: int = 5) -> List[dict]:

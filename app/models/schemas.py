@@ -67,11 +67,9 @@ class FeedbackIn(BaseModel):
     meta: Dict[str, Any] = Field(default_factory=dict)
 
 class RankDealsRequest(BaseModel):
-    investor_id: str
     top_k: int = 10
 
 class RankInvestorsRequest(BaseModel):
-    business_id: str
     top_k: int = 10
 
 class RankedItem(BaseModel):
