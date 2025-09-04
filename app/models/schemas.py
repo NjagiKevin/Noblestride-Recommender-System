@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 import uuid
 from datetime import datetime
@@ -70,3 +70,19 @@ class RankDealsRequest(BaseModel):
 
 class RankInvestorsRequest(BaseModel):
     top_k: int = 10
+
+# ---- Feedback & Other Schemas ----
+class FeedbackIn(BaseModel):
+    investor_id: str
+    business_id: str
+    event_type: str
+    meta: Dict[str, Any] = Field(default_factory=dict)
+
+class UpsertResponse(BaseModel):
+    ok: bool
+    count: int
+
+class FeedbackCreate(BaseModel):
+    investor_id: str
+    business_id: str
+    feedback_type: str
