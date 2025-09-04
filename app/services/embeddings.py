@@ -1,19 +1,10 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
-from app.models.schemas import BusinessCreate, InvestorCreate
 from app.db.session import SessionLocal
-from app.models.schemas import BusinessResponse, InvestorResponse
 from app.core.logging import logger
-from sentence_transformers import SentenceTransformer  # Add this import
-
-# Add the TextVectorizer class
-from typing import List, Dict, Any
-import numpy as np
 from sentence_transformers import SentenceTransformer
-from app.db.session import SessionLocal
-from app.core.logging import logger
 
 class TextVectorizer:
     def __init__(self, model_name: str = 'all-MiniLM-L6-v2'):
