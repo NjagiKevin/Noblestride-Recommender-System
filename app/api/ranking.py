@@ -1,6 +1,6 @@
 # app/api/ranking.py
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 import uuid
 
@@ -28,7 +28,12 @@ def get_deal_recommendations_for_user(user_id: int, request: RankDealsRequest, d
         
         response_items = []
         for item in rankings:
-            deal_obj = db.query(Deal).filter(Deal.deal_id == item['deal_id']).first()
+            deal_obj = (
+                db.query(Deal)
+                .options(joinedload(Deal.created_by_user))
+                .filter(Deal.deal_id == item['deal_id'])
+                .first()
+            )
             if deal_obj:
                 response_items.append(
                     RankedDeal(reasons=item['reasons'], deal=deal_obj)
