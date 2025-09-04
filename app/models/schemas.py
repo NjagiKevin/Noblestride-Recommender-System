@@ -4,6 +4,19 @@ from pydantic import BaseModel, Field
 import uuid
 from datetime import datetime
 
+# ---- Sector Schemas ----
+class SectorSchema(BaseModel):
+    sector_id: uuid.UUID
+    name: str
+    class Config:
+        from_attributes = True
+
+class SubsectorSchema(BaseModel):
+    subsector_id: uuid.UUID
+    name: str
+    class Config:
+        from_attributes = True
+
 # ---- User Schemas ----
 class UserBase(BaseModel):
     email: str
@@ -11,6 +24,7 @@ class UserBase(BaseModel):
     description: Optional[str] = None
     location: Optional[str] = None
     role: str = 'Investor'
+    preference_sector: Optional[List[str]] = None
 
 class UserCreate(UserBase):
     password: str
@@ -29,12 +43,12 @@ class DealBase(BaseModel):
     title: str
     description: str
     deal_size: float
-    sector: Optional[str] = None
-    subsector: Optional[str] = None
     deal_type: Optional[str] = None
 
 class DealCreate(DealBase):
     created_by: int
+    sector_id: uuid.UUID
+    subsector_id: Optional[uuid.UUID] = None
 
 class DealResponse(DealBase):
     deal_id: uuid.UUID
@@ -45,6 +59,8 @@ class DealResponse(DealBase):
     createdAt: datetime
     updatedAt: datetime
     created_by_user: UserResponse
+    sector: Optional[SectorSchema] = None
+    subsector: Optional[SubsectorSchema] = None
 
     class Config:
         from_attributes = True

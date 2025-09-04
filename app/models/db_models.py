@@ -25,6 +25,8 @@ class User(Base):
     kyc_status = Column(ENUM('Pending', 'Verified', 'Rejected', name='enum_users_kyc_status'), default='Pending')
     password = Column(String(255), nullable=False)
     role = Column(ENUM('Investor', 'Administrator', 'Target Company', name='enum_users_role'), nullable=False, default='Investor')
+    preference_sector = Column(JSON)
+    preference_sector = Column(JSON)
     description = Column(Text)
     location = Column(String(255))
     phone = Column(String(255))
@@ -46,8 +48,8 @@ class Deal(Base):
     image_url = Column(String(255))
     status = Column(ENUM('Active', 'Pending', 'Open', 'On Hold', 'Inactive', 'Closed', 'Closed & Reopened', 'Archived', name='enum_deals_status'), nullable=False, default='Open')
     deal_size = Column(Float, nullable=False)
-    sector = Column(String(255)) # Assuming sector is a string for now
-    subsector = Column(String(255)) # Assuming subsector is a string for now
+    sector_id = Column(UUID(as_uuid=True), ForeignKey('sectors.sector_id'))
+    subsector_id = Column(UUID(as_uuid=True), ForeignKey('subsectors.subsector_id'))
     created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
     visibility = Column(ENUM('Public', 'Private', name='enum_deals_visibility'), default='Public')
     deal_type = Column(ENUM('Equity', 'Debt', 'Equity and Debt', name='enum_deals_deal_type'))
@@ -56,3 +58,26 @@ class Deal(Base):
 
     # Relationships
     created_by_user = relationship("User", back_populates="deals")
+    sector = relationship("Sector", back_populates="deals")
+    subsector = relationship("Subsector", back_populates="deals")
+
+class Sector(Base):
+    __tablename__ = "sectors"
+    sector_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False, unique=True)
+    createdAt = Column(DateTime, nullable=False)
+    updatedAt = Column(DateTime, nullable=False)
+
+    deals = relationship("Deal", back_populates="sector")
+    subsectors = relationship("Subsector", back_populates="sector")
+
+class Subsector(Base):
+    __tablename__ = "subsectors"
+    subsector_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False)
+    sector_id = Column(UUID(as_uuid=True), ForeignKey('sectors.sector_id'), nullable=False)
+    createdAt = Column(DateTime, nullable=False)
+    updatedAt = Column(DateTime, nullable=False)
+
+    sector = relationship("Sector", back_populates="subsectors")
+    deals = relationship("Deal", back_populates="subsector")

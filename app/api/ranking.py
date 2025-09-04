@@ -30,7 +30,11 @@ def get_deal_recommendations_for_user(user_id: int, request: RankDealsRequest, d
         for item in rankings:
             deal_obj = (
                 db.query(Deal)
-                .options(joinedload(Deal.created_by_user))
+                .options(
+                    joinedload(Deal.created_by_user),
+                    joinedload(Deal.sector),
+                    joinedload(Deal.subsector),
+                )
                 .filter(Deal.deal_id == item['deal_id'])
                 .first()
             )

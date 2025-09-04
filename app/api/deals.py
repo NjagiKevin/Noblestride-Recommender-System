@@ -14,4 +14,13 @@ def get_all_deals(db: Session = Depends(get_db)):
     """
     Get a list of the first 10 deals.
     """
-    return db.query(Deal).options(joinedload(Deal.created_by_user)).limit(10).all()
+    return (
+        db.query(Deal)
+        .options(
+            joinedload(Deal.created_by_user),
+            joinedload(Deal.sector),
+            joinedload(Deal.subsector),
+        )
+        .limit(10)
+        .all()
+    )
