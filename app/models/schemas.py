@@ -72,13 +72,20 @@ class RankDealsRequest(BaseModel):
 class RankInvestorsRequest(BaseModel):
     top_k: int = 10
 
-class RankedItem(BaseModel):
-    id: str
-    score: float
+# ---- Ranking ----
+class RankedBusiness(BaseModel):
     reasons: List[str]
+    business: BusinessResponse
 
-class RankResponse(BaseModel):
-    items: List[RankedItem]
+class RankedInvestor(BaseModel):
+    reasons: List[str]
+    investor: InvestorResponse
+
+class RankedBusinessResponse(BaseModel):
+    items: List[RankedBusiness]
+
+class RankedInvestorResponse(BaseModel):
+    items: List[RankedInvestor]
 
 class UpsertResponse(BaseModel):
     ok: bool

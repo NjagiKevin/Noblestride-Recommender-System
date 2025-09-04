@@ -5,7 +5,6 @@ from sqlalchemy.exc import IntegrityError
 from app.models.db_models import Business
 from app.models.schemas import BusinessCreate, BusinessResponse, UpsertResponse
 from app.db.session import get_db
-from app.services.recommender import add_business
 
 
 router = APIRouter(prefix="/businesses", tags=["businesses"])
@@ -22,7 +21,6 @@ def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
 
     if existing_business:
         # If business exists, add to in-memory and return
-        add_business(business)
         return existing_business
 
     # If not found, attempt to insert
@@ -32,7 +30,6 @@ def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
     try:
         db.commit()
         db.refresh(new_business)
-        add_business(business)
         return new_business
     except IntegrityError:
         db.rollback()
@@ -42,7 +39,6 @@ def create_business(business: BusinessCreate, db: Session = Depends(get_db)):
             Business.location == business.location
         ).first()
         if existing_business:
-            add_business(business)
             return existing_business
         raise HTTPException(status_code=400, detail="Could not create business")
 

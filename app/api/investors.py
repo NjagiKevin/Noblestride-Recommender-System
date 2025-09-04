@@ -7,7 +7,6 @@ from sqlalchemy.exc import IntegrityError
 from app.models.db_models import Investor
 from app.models.schemas import InvestorCreate, InvestorResponse, UpsertResponse
 from app.db.session import get_db
-from app.services.recommender import add_investor
 
 router = APIRouter(prefix="/investors", tags=["investors"])
 
@@ -19,7 +18,6 @@ def create_investor(investor: InvestorCreate, db: Session = Depends(get_db)):
 
     if existing_investor:
         # If investor exists, add to in-memory and return
-        add_investor(investor)
         return existing_investor
 
     # If not found, attempt to insert
@@ -29,14 +27,12 @@ def create_investor(investor: InvestorCreate, db: Session = Depends(get_db)):
     try:
         db.commit()
         db.refresh(db_investor)
-        add_investor(investor)
         return db_investor
     except IntegrityError:
         db.rollback()
         # This case handles rare race conditions
         existing_investor = db.query(Investor).filter(Investor.id == investor.id).first()
         if existing_investor:
-            add_investor(investor)
             return existing_investor
         raise HTTPException(status_code=400, detail="Could not create investor")
 

@@ -1,3 +1,3 @@
-from .recommender import add_business, add_investor, update_business, update_investor, generate_rankings
+from .recommender import generate_rankings, recommend_investors_for_business
 from .embeddings import TextVectorizer
 from .feedback_logic import process_feedback
