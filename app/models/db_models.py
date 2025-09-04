@@ -1,47 +1,58 @@
 # app/models/db_models.py
-from sqlalchemy import Column,String, Float, JSON, UniqueConstraint
-from app.db.session import Base
-
-class Business(Base):
-    __tablename__ = "businesses"
-
-    id = Column(String, primary_key=True, index=True)
-    legal_name = Column(String,nullable=False, index=True)
-    sector = Column(String,nullable=True )
-    industry = Column(String,nullable=True)
-    location = Column(String, nullable=False)
-    sub_sector = Column(String)
-    countries = Column(JSON)
-    region = Column(String)
-    stage = Column(String)
-    raise_min = Column(Float)
-    raise_max = Column(Float)
-    instruments = Column(JSON)
-    impact_flags = Column(JSON)
-    description = Column(String)
-    core_service = Column(String)
-    target_clients = Column(JSON)
-    portfolio_keywords = Column(JSON)
-    __table_args__ = (
-    UniqueConstraint("legal_name", "location", name="uq_business_name_location"),
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    Float,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    JSON,
 )
-   
-class Investor(Base):
-    __tablename__ = "investors"
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID, ENUM
+import uuid
+from app.db.base import Base
 
-    id = Column(String, primary_key=True, index=True)
-    fund_name = Column(String)
-    sector_prefs = Column(JSON)
-    stage_prefs = Column(JSON)
-    countries_focus = Column(JSON)
-    geo_regions = Column(JSON)
-    countries_blocklist = Column(JSON)
-    preferred_industries = Column(JSON)
-    investment_range = Column(String)
-    ticket_min = Column(Float)
-    ticket_max = Column(Float)
-    instruments = Column(JSON)
-    impact_flags = Column(JSON)
-    mandate_text = Column(String)
-    track_record_text = Column(String)
-    timeline_hint = Column(String)
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    profile_image = Column(String(255))
+    kyc_status = Column(ENUM('Pending', 'Verified', 'Rejected', name='enum_users_kyc_status'), default='Pending')
+    password = Column(String(255), nullable=False)
+    role = Column(ENUM('Investor', 'Administrator', 'Target Company', name='enum_users_role'), nullable=False, default='Investor')
+    description = Column(Text)
+    location = Column(String(255))
+    phone = Column(String(255))
+    createdAt = Column(DateTime, nullable=False)
+    updatedAt = Column(DateTime, nullable=False)
+    deleted_at = Column(DateTime)
+    parent_user_id = Column(Integer)
+
+    # Relationships
+    deals = relationship("Deal", back_populates="created_by_user")
+
+class Deal(Base):
+    __tablename__ = "deals"
+
+    deal_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String(255), nullable=False)
+    project = Column(String(255))
+    description = Column(Text, nullable=False)
+    image_url = Column(String(255))
+    status = Column(ENUM('Active', 'Pending', 'Open', 'On Hold', 'Inactive', 'Closed', 'Closed & Reopened', 'Archived', name='enum_deals_status'), nullable=False, default='Open')
+    deal_size = Column(Float, nullable=False)
+    sector = Column(String(255)) # Assuming sector is a string for now
+    subsector = Column(String(255)) # Assuming subsector is a string for now
+    created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
+    visibility = Column(ENUM('Public', 'Private', name='enum_deals_visibility'), default='Public')
+    deal_type = Column(ENUM('Equity', 'Debt', 'Equity and Debt', name='enum_deals_deal_type'))
+    createdAt = Column(DateTime, nullable=False)
+    updatedAt = Column(DateTime, nullable=False)
+
+    # Relationships
+    created_by_user = relationship("User", back_populates="deals")

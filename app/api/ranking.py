@@ -2,57 +2,58 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
+import uuid
 
 from app.models.schemas import (
-    RankInvestorsRequest,
     RankDealsRequest,
-    RankedBusinessResponse,
-    RankedInvestorResponse,
-    RankedBusiness,
-    RankedInvestor,
+    RankInvestorsRequest,
+    RankedDealResponse,
+    RankedUserResponse,
+    RankedDeal,
+    RankedUser,
 )
 from app.db.session import get_db
-from app.services.recommender import generate_rankings, recommend_investors_for_business
-from app.models.db_models import Business, Investor
+from app.services.recommender import recommend_deals_for_user, recommend_investors_for_deal
+from app.models.db_models import User, Deal
 
 router = APIRouter(prefix="/rank", tags=["ranking"])
 
-@router.post("/businesses/{investor_id}", response_model=RankedBusinessResponse)
-def recommend_businesses_for_investor(investor_id: str, request: RankDealsRequest, db: Session = Depends(get_db)):
+@router.post("/users/{user_id}/recommended-deals", response_model=RankedDealResponse)
+def get_deal_recommendations_for_user(user_id: int, request: RankDealsRequest, db: Session = Depends(get_db)):
     """
-    Recommend businesses for a given investor, returning full details and reasons.
+    Recommend deals for a given user (investor).
     """
     try:
-        rankings = generate_rankings(db=db, investor_id=investor_id, top_n=request.top_k)
+        rankings = recommend_deals_for_user(db=db, user_id=user_id, top_n=request.top_k)
         
         response_items = []
         for item in rankings:
-            business_obj = db.query(Business).filter(Business.id == item['business_id']).first()
-            if business_obj:
+            deal_obj = db.query(Deal).filter(Deal.deal_id == item['deal_id']).first()
+            if deal_obj:
                 response_items.append(
-                    RankedBusiness(reasons=item['reasons'], business=business_obj)
+                    RankedDeal(reasons=item['reasons'], deal=deal_obj)
                 )
         
-        return RankedBusinessResponse(items=response_items)
+        return RankedDealResponse(items=response_items)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating business recommendations: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating deal recommendations: {str(e)}")
 
-@router.post("/investors/{business_id}", response_model=RankedInvestorResponse)
-def recommend_investors_for_business_endpoint(business_id: str, request: RankInvestorsRequest, db: Session = Depends(get_db)):
+@router.post("/deals/{deal_id}/recommended-investors", response_model=RankedUserResponse)
+def get_investor_recommendations_for_deal(deal_id: uuid.UUID, request: RankInvestorsRequest, db: Session = Depends(get_db)):
     """
-    Recommend investors for a given business, returning full details and reasons.
+    Recommend investors for a given deal.
     """
     try:
-        rankings = recommend_investors_for_business(db=db, business_id=business_id, top_n=request.top_k)
+        rankings = recommend_investors_for_deal(db=db, deal_id=deal_id, top_n=request.top_k)
         
         response_items = []
         for item in rankings:
-            investor_obj = db.query(Investor).filter(Investor.id == item['investor_id']).first()
-            if investor_obj:
+            user_obj = db.query(User).filter(User.id == item['user_id']).first()
+            if user_obj:
                 response_items.append(
-                    RankedInvestor(reasons=item['reasons'], investor=investor_obj)
+                    RankedUser(reasons=item['reasons'], user=user_obj)
                 )
 
-        return RankedInvestorResponse(items=response_items)
+        return RankedUserResponse(items=response_items)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating investor recommendations: {str(e)}")
