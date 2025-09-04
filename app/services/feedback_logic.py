@@ -2,7 +2,7 @@
 
 from sqlalchemy.orm import Session
 from app.models.schemas import FeedbackIn
-from app.models.db_models import Business, Investor
+
 from app.core.logging import logger
 
 def process_feedback(feedback: str) -> dict:
