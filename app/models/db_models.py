@@ -25,7 +25,7 @@ class User(Base):
     kyc_status = Column(ENUM('Pending', 'Verified', 'Rejected', name='enum_users_kyc_status'), default='Pending')
     password = Column(String(255), nullable=False)
     role = Column(ENUM('Investor', 'Administrator', 'Target Company', name='enum_users_role'), nullable=False, default='Investor')
-    preference_sector = Column(JSON)
+    role_id = Column(UUID(as_uuid=True), ForeignKey('roles.role_id'), nullable=False)
     preference_sector = Column(JSON)
     description = Column(Text)
     location = Column(String(255))
@@ -37,6 +37,7 @@ class User(Base):
 
     # Relationships
     deals = relationship("Deal", back_populates="created_by_user")
+    role_obj = relationship("Role", back_populates="users")
 
 class Deal(Base):
     __tablename__ = "deals"
@@ -81,3 +82,12 @@ class Subsector(Base):
 
     sector = relationship("Sector", back_populates="subsectors")
     deals = relationship("Deal", back_populates="subsector")
+
+class Role(Base):
+    __tablename__ = "roles"
+    role_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False, unique=True)
+    createdAt = Column(DateTime, nullable=False)
+    updatedAt = Column(DateTime, nullable=False)
+
+    users = relationship("User", back_populates="role_obj")

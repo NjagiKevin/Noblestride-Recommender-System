@@ -1,10 +1,10 @@
 # app/api/users.py
 from fastapi import APIRouter, Depends, status, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from sqlalchemy.exc import IntegrityError
 
-from app.models.db_models import User
+from app.models.db_models import User, Role
 from app.models.schemas import UserResponse, UserCreate
 from app.db.session import get_db
 
@@ -17,7 +17,14 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     if existing_user:
         raise HTTPException(status_code=400, detail="User with this email already exists")
 
+    # Find the role_id based on the role name
+    role_obj = db.query(Role).filter(Role.name == user.role).first()
+    if not role_obj:
+        raise HTTPException(status_code=400, detail=f"Role '{user.role}' not found.")
+
     db_user = User(**user.dict())
+    db_user.role_id = role_obj.role_id # Assign the role_id
+
     db.add(db_user)
     try:
         db.commit()
@@ -32,4 +39,4 @@ def get_all_users(db: Session = Depends(get_db)):
     """
     Get a list of the first 10 users.
     """
-    return db.query(User).limit(10).all()
+    return db.query(User).options(joinedload(User.role_obj)).limit(10).all()

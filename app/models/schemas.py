@@ -4,6 +4,13 @@ from pydantic import BaseModel, Field
 import uuid
 from datetime import datetime
 
+# ---- Role Schema ----
+class RoleSchema(BaseModel):
+    role_id: uuid.UUID
+    name: str
+    class Config:
+        from_attributes = True
+
 # ---- Sector Schemas ----
 class SectorSchema(BaseModel):
     sector_id: uuid.UUID
@@ -34,6 +41,8 @@ class UserResponse(UserBase):
     profile_image: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
+    role_id: uuid.UUID # This is now in UserResponse, not UserBase
+    role_obj: RoleSchema
 
     class Config:
         from_attributes = True

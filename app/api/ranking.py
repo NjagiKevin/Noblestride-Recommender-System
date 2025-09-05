@@ -57,7 +57,12 @@ def get_investor_recommendations_for_deal(deal_id: uuid.UUID, request: RankInves
         
         response_items = []
         for item in rankings:
-            user_obj = db.query(User).filter(User.id == item['user_id']).first()
+            user_obj = (
+                db.query(User)
+                .options(joinedload(User.role_obj))
+                .filter(User.id == item['user_id'])
+                .first()
+            )
             if user_obj:
                 response_items.append(
                     RankedUser(reasons=item['reasons'], user=user_obj)
