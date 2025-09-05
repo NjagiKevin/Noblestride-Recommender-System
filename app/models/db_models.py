@@ -13,6 +13,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 import uuid
+from datetime import datetime # Import datetime
+
 from app.db.base import Base
 
 class User(Base):
@@ -30,8 +32,8 @@ class User(Base):
     description = Column(Text)
     location = Column(String(255))
     phone = Column(String(255))
-    createdAt = Column(DateTime, nullable=False)
-    updatedAt = Column(DateTime, nullable=False)
+    createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
     deleted_at = Column(DateTime)
     parent_user_id = Column(Integer)
 
@@ -54,8 +56,8 @@ class Deal(Base):
     created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
     visibility = Column(ENUM('Public', 'Private', name='enum_deals_visibility'), default='Public')
     deal_type = Column(ENUM('Equity', 'Debt', 'Equity and Debt', name='enum_deals_deal_type'))
-    createdAt = Column(DateTime, nullable=False)
-    updatedAt = Column(DateTime, nullable=False)
+    createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     created_by_user = relationship("User", back_populates="deals")
@@ -66,8 +68,8 @@ class Sector(Base):
     __tablename__ = "sectors"
     sector_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False, unique=True)
-    createdAt = Column(DateTime, nullable=False)
-    updatedAt = Column(DateTime, nullable=False)
+    createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     deals = relationship("Deal", back_populates="sector")
     subsectors = relationship("Subsector", back_populates="sector")
@@ -77,8 +79,8 @@ class Subsector(Base):
     subsector_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
     sector_id = Column(UUID(as_uuid=True), ForeignKey('sectors.sector_id'), nullable=False)
-    createdAt = Column(DateTime, nullable=False)
-    updatedAt = Column(DateTime, nullable=False)
+    createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     sector = relationship("Sector", back_populates="subsectors")
     deals = relationship("Deal", back_populates="subsector")
@@ -87,7 +89,7 @@ class Role(Base):
     __tablename__ = "roles"
     role_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False, unique=True)
-    createdAt = Column(DateTime, nullable=False)
-    updatedAt = Column(DateTime, nullable=False)
+    createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     users = relationship("User", back_populates="role_obj")

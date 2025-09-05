@@ -56,6 +56,7 @@ class DealBase(BaseModel):
 
 class DealCreate(DealBase):
     created_by: int
+    target_company_id: int
     sector_id: uuid.UUID
     subsector_id: Optional[uuid.UUID] = None
 
