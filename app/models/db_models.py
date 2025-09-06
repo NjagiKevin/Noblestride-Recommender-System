@@ -49,8 +49,20 @@ class Deal(Base):
     project = Column(String(255))
     description = Column(Text, nullable=False)
     image_url = Column(String(255))
-    status = Column(ENUM('Active', 'Pending', 'Open', 'On Hold', 'Inactive', 'Closed', 'Closed & Reopened', 'Archived', name='enum_deals_status'), nullable=False, default='Open')
+    status = Column(
+        ENUM(
+            'Active', 'Pending', 'Open', 'On Hold', 'Inactive', 'Closed',
+            'Closed & Reopened', 'Archived',
+            name='enum_deals_status'
+        ),
+        nullable=False,
+        default='Open'
+    )
     deal_size = Column(Float, nullable=False)
+
+    # add this (from schema dump)
+    target_company_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+
     sector_id = Column(UUID(as_uuid=True), ForeignKey('sectors.sector_id'))
     subsector_id = Column(UUID(as_uuid=True), ForeignKey('subsectors.subsector_id'))
     created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
@@ -60,9 +72,12 @@ class Deal(Base):
     updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    created_by_user = relationship("User", back_populates="deals")
+    created_by_user = relationship("User", back_populates="deals", foreign_keys=[created_by])
+    target_company = relationship("User", foreign_keys=[target_company_id])
     sector = relationship("Sector", back_populates="deals")
     subsector = relationship("Subsector", back_populates="deals")
+
+
 
 class Sector(Base):
     __tablename__ = "sectors"
