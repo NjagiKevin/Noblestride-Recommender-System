@@ -47,6 +47,19 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+class UserUpdate(BaseModel):
+    email: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    preference_sector: Optional[List[str]] = None
+    profile_image: Optional[str] = None
+    password: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
 # ---- Deal Schemas ----
 class DealBase(BaseModel):
     title: str
