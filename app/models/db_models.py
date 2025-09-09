@@ -38,7 +38,7 @@ class User(Base):
     parent_user_id = Column(Integer)
 
     # Relationships
-    deals = relationship("Deal", back_populates="created_by_user")
+    deals = relationship("Deal", foreign_keys="[Deal.created_by]", back_populates="created_by_user")
     role_obj = relationship("Role", back_populates="users")
 
 class Deal(Base):
@@ -50,29 +50,23 @@ class Deal(Base):
     description = Column(Text, nullable=False)
     image_url = Column(String(255))
     status = Column(
-        ENUM(
-            'Active', 'Pending', 'Open', 'On Hold', 'Inactive', 'Closed',
-            'Closed & Reopened', 'Archived',
-            name='enum_deals_status'
-        ),
+        ENUM('Active', 'Pending', 'Open', 'On Hold', 'Inactive', 'Closed', 'Closed & Reopened', 'Archived',
+             name='enum_deals_status'),
         nullable=False,
         default='Open'
     )
     deal_size = Column(Float, nullable=False)
-
-    # add this (from schema dump)
-    target_company_id = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
-
     sector_id = Column(UUID(as_uuid=True), ForeignKey('sectors.sector_id'))
     subsector_id = Column(UUID(as_uuid=True), ForeignKey('subsectors.subsector_id'))
     created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
+    target_company_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     visibility = Column(ENUM('Public', 'Private', name='enum_deals_visibility'), default='Public')
     deal_type = Column(ENUM('Equity', 'Debt', 'Equity and Debt', name='enum_deals_deal_type'))
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
     updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
-    created_by_user = relationship("User", back_populates="deals", foreign_keys=[created_by])
+    created_by_user = relationship("User", foreign_keys=[created_by], back_populates="deals")
     target_company = relationship("User", foreign_keys=[target_company_id])
     sector = relationship("Sector", back_populates="deals")
     subsector = relationship("Subsector", back_populates="deals")

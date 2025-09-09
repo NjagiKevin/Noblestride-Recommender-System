@@ -56,19 +56,19 @@ class DealBase(BaseModel):
 
 class DealCreate(DealBase):
     created_by: int
-    target_company_id: int
+    target_company_id: int  # <- comment moved to the side properly
     sector_id: uuid.UUID
     subsector_id: Optional[uuid.UUID] = None
 
 class DealResponse(DealBase):
     deal_id: uuid.UUID
     project: Optional[str] = None
-    image_url: Optional[str] = None
     status: str
     visibility: str
     createdAt: datetime
     updatedAt: datetime
     created_by_user: UserResponse
+    target_company: UserResponse
     sector: Optional[SectorSchema] = None
     subsector: Optional[SubsectorSchema] = None
 
