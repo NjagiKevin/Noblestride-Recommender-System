@@ -4,7 +4,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    Float,
+    Float,TIMESTAMP, func,
     Boolean,
     DateTime,
     ForeignKey,
@@ -82,6 +82,7 @@ class Sector(Base):
 
     deals = relationship("Deal", back_populates="sector")
     subsectors = relationship("Subsector", back_populates="sector")
+    businesses = relationship("Business", back_populates="sector_rel")
 
 class Subsector(Base):
     __tablename__ = "subsectors"
@@ -93,6 +94,7 @@ class Subsector(Base):
 
     sector = relationship("Sector", back_populates="subsectors")
     deals = relationship("Deal", back_populates="subsector")
+    businesses = relationship("Business", back_populates="subsector_rel")
 
 class Role(Base):
     __tablename__ = "roles"
@@ -102,3 +104,33 @@ class Role(Base):
     updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     users = relationship("User", back_populates="role_obj")
+
+class Business(Base):
+    __tablename__ = "businesses"
+
+    id = Column(String, primary_key=True, index=True)
+    legal_name = Column(String(255), nullable=False)
+    description = Column(Text)
+    location = Column(String(255))
+    sector_id = Column(UUID(as_uuid=True), ForeignKey('sectors.sector_id'), nullable=True)
+    subsector_id = Column(UUID(as_uuid=True), ForeignKey('subsectors.subsector_id'), nullable=True)
+    capital_needed = Column(Float)
+    createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    sector_rel = relationship("Sector", back_populates="businesses", foreign_keys=[sector_id])
+    subsector_rel = relationship("Subsector", back_populates="businesses", foreign_keys=[subsector_id])
+
+
+
+class Investor(Base):
+    __tablename__ = "investors"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    description = Column(Text)
+    location = Column(String(255))
+    preference_sector = Column(JSON)
+    createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

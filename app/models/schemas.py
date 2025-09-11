@@ -125,3 +125,41 @@ class FeedbackCreate(BaseModel):
     investor_id: str
     business_id: str
     feedback_type: str
+
+# ---- Business Schemas ----
+class BusinessBase(BaseModel):
+    id: str
+    legal_name: str
+    description: Optional[str] = None
+    location: Optional[str] = None
+    sector_id: Optional[uuid.UUID] = None
+    subsector_id: Optional[uuid.UUID] = None
+    capital_needed: Optional[float] = None
+
+class BusinessCreate(BusinessBase):
+    pass
+
+class BusinessResponse(BusinessBase):
+    createdAt: datetime
+    updatedAt: datetime
+
+    class Config:
+        from_attributes = True
+
+# ---- Investor Schemas ----
+class InvestorBase(BaseModel):
+    name: str
+    email: str
+    description: Optional[str] = None
+    location: Optional[str] = None
+    preference_sector: Optional[List[str]] = None
+
+class InvestorCreate(InvestorBase):
+    id: int
+
+class InvestorResponse(InvestorBase):
+    id: int
+    reasons: List[str]
+
+    class Config:
+        from_attributes = True

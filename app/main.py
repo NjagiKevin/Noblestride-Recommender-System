@@ -5,6 +5,7 @@ from app.core.logging_config import configure_logging
 from app.db.session import init_db
 from app.db.base import Base
 from app.db.session import engine
+from app.core.responses import NoneExcludingJSONResponse
 
 # Configure logging
 configure_logging()
@@ -13,7 +14,8 @@ configure_logging()
 app = FastAPI(
     title="Investor–Business Recommender Service",
     version="0.1.0",
-    description="Microservice for recommending businesses to investors and vice versa."
+    description="Microservice for recommending businesses to investors and vice versa.",
+    default_response_class=NoneExcludingJSONResponse
 )
 
 # Startup event to initialize database
@@ -37,4 +39,4 @@ def health():
     }
 
 # create tables if they don’t exist
-Base.metadata.create_all(bind=engine)# create tables if they don’t exist
+Base.metadata.create_all(bind=engine)

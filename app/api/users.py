@@ -1,10 +1,10 @@
 # app/api/users.py
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
-from typing import List
+from typing import List,Optional
 from sqlalchemy.exc import IntegrityError
 
-from app.models.db_models import User, Role
+from app.models.db_models import User, Role, Deal, Sector
 from app.models.schemas import UserResponse, UserCreate
 from app.db.session import get_db
 
@@ -35,19 +35,20 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Could not create user due to data integrity issue.")
 
 @router.get("/", response_model=List[UserResponse])
-def get_all_users(db: Session = Depends(get_db)):
+def get_all_users(db: Session = Depends(get_db), role: str = None):
     """
-    Get a list of the first 10 users.
+    Get a list of users, optionally filtered by role.
     """
-    return db.query(User).options(joinedload(User.role_obj)).limit(10).all()
+    query = db.query(User).options(joinedload(User.role_obj))
+    if role:
+        query = query.filter(User.role == role)
+    return query.all()
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.db_models import User
 from app.models.schemas import UserResponse, UserUpdate
-
-router = APIRouter()
 
 @router.put("/users/{user_id}", response_model=UserResponse)
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
@@ -62,3 +63,18 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
     db.commit()
     db.refresh(db_user)
     return db_user
+@router.get("/sectors/")
+def get_sectors(db: Session = Depends(get_db)):
+    """
+    Get all available sectors.
+    """
+    return db.query(Sector).all()
+
+@router.get("/users")
+async def get_users(role: Optional[str] = Query(None, description="Filter by role")):
+    if role:
+        users = await User.filter(role=role)  # only fetch users with that role
+    else:
+        users = await User.all()  # return all users if no filter
+    
+    return users
