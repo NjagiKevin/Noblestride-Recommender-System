@@ -1,9 +1,11 @@
 # app/api/debug.py
 
+from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.db_models import Business, Investor, Sector, Subsector, User, Deal, Role
+from app.models.schemas import SubsectorCreate, SubsectorSchema
 
 router = APIRouter()
 
@@ -60,3 +62,15 @@ def get_all_ids(db: Session = Depends(get_db)):
         "sectors": [{"id": s.sector_id, "name": s.name} for s in sectors],
         "subsectors": [{"id": ss.subsector_id, "name": ss.name, "sector_id": ss.sector_id} for ss in subsectors]
     }
+
+@router.post("/debug/subsectors", response_model=List[SubsectorSchema])
+def create_subsectors(subsectors: List[SubsectorCreate], db: Session = Depends(get_db)):
+    db_subsectors = []
+    for subsector in subsectors:
+        db_subsector = Subsector(**subsector.dict())
+        db.add(db_subsector)
+        db_subsectors.append(db_subsector)
+    db.commit()
+    for db_subsector in db_subsectors:
+        db.refresh(db_subsector)
+    return db_subsectors

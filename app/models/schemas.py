@@ -24,6 +24,10 @@ class SubsectorSchema(BaseModel):
     class Config:
         from_attributes = True
 
+class SubsectorCreate(BaseModel):
+    name: str
+    sector_id: uuid.UUID
+
 # ---- User Schemas ----
 class UserBase(BaseModel):
     email: str
@@ -72,6 +76,9 @@ class DealCreate(DealBase):
     target_company_id: int  # <- comment moved to the side properly
     sector_id: uuid.UUID
     subsector_id: Optional[uuid.UUID] = None
+
+class DealStatusUpdate(BaseModel):
+    status: str
 
 class DealResponse(DealBase):
     deal_id: uuid.UUID

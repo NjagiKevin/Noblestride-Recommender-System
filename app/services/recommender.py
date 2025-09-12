@@ -1,23 +1,26 @@
 from typing import List
-import uuid
+from uuid import UUID
 import numpy as np
 from sqlalchemy.orm import Session, joinedload
 from sklearn.metrics.pairwise import cosine_similarity
+from fastapi import Depends
+from app.db.session import get_db
+import logging
 
 from app.models.db_models import User, Deal, Sector, Subsector
-from app.models.schemas import BusinessCreate, InvestorResponse
+from app.models.schemas import BusinessCreate
 from app.services.embeddings import TextVectorizer
 
 vectorizer = TextVectorizer()
 
-
 def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List[dict]:
-    """
-    Recommend deals for a given investor (user_id).
-    """
+    logging.basicConfig(level=logging.INFO)
     investor = db.query(User).filter(User.id == user_id, User.role == 'Investor').first()
     if not investor:
+        logging.warning(f"Investor with id {user_id} not found.")
         raise ValueError("Investor not found")
+
+    logging.info(f"Investor found: {investor.name} with preferences: {investor.preference_sector}")
 
     all_deals = (
         db.query(Deal)
@@ -25,6 +28,7 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
         .filter(Deal.status == 'Active')
         .all()
     )
+    logging.info(f"Found {len(all_deals)} active deals.")
     if not all_deals:
         return []
 
@@ -36,11 +40,11 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
         reasons = []
         sector_name = deal.sector.name if deal.sector else ''
         subsector_name = deal.subsector.name if deal.subsector else ''
-        deal_text = f"{deal.title} {deal.description} {sector_name} {subsector_name}"
+        deal_text = f"{deal.title or ''} {deal.description or ''} {sector_name} {subsector_name}"
         deal_embedding = vectorizer.vectorize_text(deal_text)
 
         # Match investor's preferred sector
-        if investor.preference_sector and sector_name and sector_name in investor.preference_sector:
+        if investor.preference_sector and sector_name and sector_name in (investor.preference_sector or []):
             reasons.append(f"Matches preferred sector: {sector_name}")
 
         description_sim = cosine_similarity([investor_embedding], [deal_embedding])[0][0]
@@ -48,6 +52,7 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
             reasons.append("Similar focus based on description.")
 
         score = description_sim + (1 if reasons else 0)
+        logging.info(f"Deal: {deal.title}, Score: {score}, Reasons: {reasons}")
 
         if score > 0.5:
             scores.append({
@@ -60,14 +65,10 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
                 "reasons": reasons
             })
 
-    ranked = sorted(scores, key=lambda x: x["score"], reverse=True)
-    return ranked[:top_n]
+    return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
 
 
-def recommend_investors_for_deal(db: Session, deal_id: uuid.UUID, top_n: int = 10) -> List[dict]:
-    """
-    Recommend investors for a given deal.
-    """
+def recommend_investors_for_deal(db: Session, deal_id: UUID, top_n: int = 10) -> List[dict]:
     deal = (
         db.query(Deal)
         .options(joinedload(Deal.sector), joinedload(Deal.subsector))
@@ -83,7 +84,7 @@ def recommend_investors_for_deal(db: Session, deal_id: uuid.UUID, top_n: int = 1
 
     sector_name = deal.sector.name if deal.sector else ''
     subsector_name = deal.subsector.name if deal.subsector else ''
-    deal_text = f"{deal.title} {deal.description} {sector_name} {subsector_name}"
+    deal_text = f"{deal.title or ''} {deal.description or ''} {sector_name} {subsector_name}"
     deal_embedding = vectorizer.vectorize_text(deal_text)
 
     scores = []
@@ -92,7 +93,7 @@ def recommend_investors_for_deal(db: Session, deal_id: uuid.UUID, top_n: int = 1
         investor_text = f"{investor.name} {investor.description or ''}"
         investor_embedding = vectorizer.vectorize_text(investor_text)
 
-        if investor.preference_sector and sector_name and sector_name in investor.preference_sector:
+        if investor.preference_sector and sector_name and sector_name in (investor.preference_sector or []):
             reasons.append(f"Invests in your sector: {sector_name}")
 
         description_sim = cosine_similarity([deal_embedding], [investor_embedding])[0][0]
@@ -104,18 +105,19 @@ def recommend_investors_for_deal(db: Session, deal_id: uuid.UUID, top_n: int = 1
         if score > 0.5:
             scores.append({
                 "user_id": investor.id,
+                "name": investor.name,
+                "email": investor.email,
+                "description": investor.description,
+                "location": investor.location,
+                "preference_sector": investor.preference_sector,
                 "score": score,
                 "reasons": reasons
             })
 
-    ranked = sorted(scores, key=lambda x: x["score"], reverse=True)
-    return ranked[:top_n]
+    return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
 
 
 def recommend_investors_for_business(db: Session, business: BusinessCreate, top_n: int = 10) -> List[dict]:
-    """
-    Recommend investors for a business that is not yet stored as a Deal.
-    """
     sector_name, subsector_name = "", ""
 
     if business.sector_id:
@@ -128,7 +130,7 @@ def recommend_investors_for_business(db: Session, business: BusinessCreate, top_
         if subsector:
             subsector_name = subsector.name
 
-    business_text = f"{business.name} {business.description or ''} {sector_name} {subsector_name}"
+    business_text = f"{business.legal_name} {business.description or ''} {sector_name} {subsector_name}"
     business_embedding = vectorizer.vectorize_text(business_text)
 
     all_investors = db.query(User).filter(User.role == 'Investor').all()
@@ -141,7 +143,7 @@ def recommend_investors_for_business(db: Session, business: BusinessCreate, top_
         investor_text = f"{investor.name} {investor.description or ''}"
         investor_embedding = vectorizer.vectorize_text(investor_text)
 
-        if investor.preference_sector and sector_name and sector_name in investor.preference_sector:
+        if investor.preference_sector and sector_name and sector_name in (investor.preference_sector or []):
             reasons.append(f"Matches preferred sector: {sector_name}")
 
         description_sim = cosine_similarity([business_embedding], [investor_embedding])[0][0]
@@ -157,5 +159,7 @@ def recommend_investors_for_business(db: Session, business: BusinessCreate, top_
                 "reasons": reasons
             })
 
-    ranked = sorted(scores, key=lambda x: x["score"], reverse=True)
-    return ranked[:top_n]
+    return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
+
+def recommend_investors_endpoint(deal_id: UUID, db: Session = Depends(get_db)):
+    return recommend_investors_for_deal(db, deal_id)

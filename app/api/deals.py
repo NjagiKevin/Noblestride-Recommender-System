@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List
 from sqlalchemy.exc import IntegrityError
+import uuid
 
 from app.models.db_models import Deal, Sector, Subsector
-from app.models.schemas import DealResponse, DealCreate
+from app.models.schemas import DealResponse, DealCreate, DealStatusUpdate
 from app.db.session import get_db
 
 router = APIRouter(prefix="/deals", tags=["deals"])
@@ -113,3 +114,14 @@ def get_all_deals(db: Session = Depends(get_db)):
         .limit(10)
         .all()
     )
+
+@router.put("/{deal_id}/status", response_model=DealResponse)
+def update_deal_status(deal_id: uuid.UUID, status_update: DealStatusUpdate, db: Session = Depends(get_db)):
+    deal = db.query(Deal).filter(Deal.deal_id == deal_id).first()
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
+    deal.status = status_update.status
+    db.commit()
+    db.refresh(deal)
+    return deal
