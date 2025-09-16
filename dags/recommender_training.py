@@ -18,31 +18,47 @@ default_args = {
 
 def extract_data(**context):
     """
-    Extract user info from Postgres into a Pandas DataFrame
-    and push to XCom for downstream tasks.
+    Extract investor and business info from Postgres into separate Pandas DataFrames
+    and push their file paths to XCom for downstream tasks.
     """
     hook = PostgresHook(postgres_conn_id="my_postgres")  # <-- configure in Airflow UI
-    sql = "SELECT * FROM users;"   # adjust to your schema
+    
+    # Extract investors
+    sql_investors = "SELECT * FROM investors;"
     conn = hook.get_conn()
-    df = pd.read_sql(sql, conn)
+    df_investors = pd.read_sql(sql_investors, conn)
+    investors_file_path = f"/tmp/investors_data_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
+    df_investors.to_csv(investors_file_path, index=False)
+    context["ti"].xcom_push(key="investors_data_path", value=investors_file_path)
     
-    # Save to temporary file (Airflow-friendly way)
-    file_path = f"/tmp/user_data_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
-    df.to_csv(file_path, index=False)
+    # Extract businesses
+    sql_businesses = "SELECT * FROM businesses;"
+    df_businesses = pd.read_sql(sql_businesses, conn)
+    businesses_file_path = f"/tmp/businesses_data_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
+    df_businesses.to_csv(businesses_file_path, index=False)
+    context["ti"].xcom_push(key="businesses_data_path", value=businesses_file_path)
     
-    # Push path to XCom so next tasks can use it
-    context["ti"].xcom_push(key="raw_data_path", value=file_path)
+    conn.close()
 
 
 def preprocess_task(**context):
-    """Preprocess the extracted CSV and save processed file path to XCom"""
-    raw_path = context["ti"].xcom_pull(key="raw_data_path", task_ids="extract_data")
-    df = pd.read_csv(raw_path)
+    """Preprocess the extracted CSVs and save processed file path to XCom"""
+    investors_path = context["ti"].xcom_pull(key="investors_data_path", task_ids="extract_data")
+    businesses_path = context["ti"].xcom_pull(key="businesses_data_path", task_ids="extract_data")
+    
+    df_investors = pd.read_csv(investors_path)
+    df_businesses = pd.read_csv(businesses_path)
 
-    processed_df = preprocess_data(df)
+    # Preprocess both dataframes
+    processed_investors_df = preprocess_data(df_investors)
+    processed_businesses_df = preprocess_data(df_businesses)
+
+    # For this example, we'll just concatenate them. 
+    # A real-world scenario might involve more complex merging or feature engineering.
+    merged_df = pd.concat([processed_investors_df, processed_businesses_df], ignore_index=True)
 
     file_path = f"/tmp/processed_data_{datetime.now().strftime('%Y%m%d%H%M%S')}.csv"
-    processed_df.to_csv(file_path, index=False)
+    merged_df.to_csv(file_path, index=False)
 
     context["ti"].xcom_push(key="processed_data_path", value=file_path)
 

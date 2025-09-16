@@ -10,4 +10,5 @@ python-dotenv
 pydantic-settings
 apache-airflow
 psycopg2
+pytest
 

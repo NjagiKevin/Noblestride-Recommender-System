@@ -4,14 +4,51 @@ from pydantic import BaseModel, Field
 import uuid
 from datetime import datetime
 
-# ---- Role Schema ----
+# ---- Base Schemas ----
+class BusinessBase(BaseModel):
+    id: Optional[uuid.UUID] = None
+    legal_name: Optional[str] = None
+    sector: Optional[str] = None
+    industry: Optional[str] = None
+    location: Optional[str] = None
+    sub_sector: Optional[str] = None
+    countries: Optional[list] = None
+    region: Optional[str] = None
+    stage: Optional[str] = None
+    raise_min: Optional[float] = None
+    raise_max: Optional[float] = None
+    instruments: Optional[list] = None
+    impact_flags: Optional[list] = None
+    description: Optional[str] = None
+    core_service: Optional[str] = None
+    target_clients: Optional[list] = None
+    portfolio_keywords: Optional[list] = None
+    capital_needed: Optional[float] = None
+    createdAt: datetime
+    updatedAt: datetime
+
+    class Config:
+        orm_mode = True
+
+class DealBase(BaseModel):
+    title: str
+    description: str
+    deal_size: float
+    deal_type: Optional[str] = None
+
+class InvestorBase(BaseModel):
+    name: str
+    email: str
+    description: Optional[str] = None
+    location: Optional[str] = None
+    preference_sector: Optional[List[str]] = None
+
 class RoleSchema(BaseModel):
     role_id: uuid.UUID
     name: str
     class Config:
         from_attributes = True
 
-# ---- Sector Schemas ----
 class SectorSchema(BaseModel):
     sector_id: uuid.UUID
     name: str
@@ -21,6 +58,7 @@ class SectorSchema(BaseModel):
 class SubsectorSchema(BaseModel):
     subsector_id: uuid.UUID
     name: str
+    sector_id: uuid.UUID
     class Config:
         from_attributes = True
 
@@ -28,7 +66,6 @@ class SubsectorCreate(BaseModel):
     name: str
     sector_id: uuid.UUID
 
-# ---- User Schemas ----
 class UserBase(BaseModel):
     email: str
     name: str
@@ -37,19 +74,30 @@ class UserBase(BaseModel):
     role: str = 'Investor'
     preference_sector: Optional[List[str]] = None
 
+# ---- Create Schemas ----
+class BusinessCreate(BusinessBase):
+    capital_needed: Optional[float] = None
+
+class DealCreate(DealBase):
+    created_by: int
+    target_company_id: int
+    sector_id: uuid.UUID
+    subsector_id: Optional[uuid.UUID] = None
+
+class FeedbackCreate(BaseModel):
+    investor_id: str
+    business_id: str
+    feedback_type: str
+
+class InvestorCreate(InvestorBase):
+    id: int
+
 class UserCreate(UserBase):
     password: str
 
-class UserResponse(UserBase):
-    id: int
-    profile_image: Optional[str] = None
-    createdAt: datetime
-    updatedAt: datetime
-    role_id: uuid.UUID # This is now in UserResponse, not UserBase
-    role_obj: RoleSchema
-
-    class Config:
-        from_attributes = True
+# ---- Update Schemas ----
+class DealStatusUpdate(BaseModel):
+    status: str
 
 class UserUpdate(BaseModel):
     email: Optional[str] = None
@@ -63,22 +111,16 @@ class UserUpdate(BaseModel):
     class Config:
         from_attributes = True
 
+# ---- Response Schemas ----
+class BusinessResponse(BusinessBase):
+    id: str
+    legal_name: Optional[str]
+    description: Optional[str]
+    location: Optional[str]
+    capital_needed: Optional[float]
 
-# ---- Deal Schemas ----
-class DealBase(BaseModel):
-    title: str
-    description: str
-    deal_size: float
-    deal_type: Optional[str] = None
-
-class DealCreate(DealBase):
-    created_by: int
-    target_company_id: int  # <- comment moved to the side properly
-    sector_id: uuid.UUID
-    subsector_id: Optional[uuid.UUID] = None
-
-class DealStatusUpdate(BaseModel):
-    status: str
+    class Config:
+        orm_mode = True
 
 class DealResponse(DealBase):
     deal_id: uuid.UUID
@@ -95,10 +137,17 @@ class DealResponse(DealBase):
     class Config:
         from_attributes = True
 
-# ---- Ranking Schemas ----
+class InvestorResponse(InvestorBase):
+    id: int
+    reasons: List[str]
+
+    class Config:
+        from_attributes = True
+
 class RankedDeal(BaseModel):
     reasons: List[str]
     deal: DealResponse
+    business: Optional[BusinessResponse] = None
 
 class RankedUser(BaseModel):
     reasons: List[str]
@@ -110,14 +159,18 @@ class RankedDealResponse(BaseModel):
 class RankedUserResponse(BaseModel):
     items: List[RankedUser]
 
-# ---- Request Schemas for Ranking ----
-class RankDealsRequest(BaseModel):
-    top_k: int = 10
+class UserResponse(UserBase):
+    id: int
+    profile_image: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime
+    role_id: uuid.UUID
+    role_obj: RoleSchema
 
-class RankInvestorsRequest(BaseModel):
-    top_k: int = 10
+    class Config:
+        from_attributes = True
 
-# ---- Feedback & Other Schemas ----
+# ---- Other Schemas ----
 class FeedbackIn(BaseModel):
     investor_id: str
     business_id: str
@@ -128,45 +181,9 @@ class UpsertResponse(BaseModel):
     ok: bool
     count: int
 
-class FeedbackCreate(BaseModel):
-    investor_id: str
-    business_id: str
-    feedback_type: str
+# ---- Request Schemas for Ranking ----
+class RankDealsRequest(BaseModel):
+    top_k: int = 10
 
-# ---- Business Schemas ----
-class BusinessBase(BaseModel):
-    id: str
-    legal_name: str
-    description: Optional[str] = None
-    location: Optional[str] = None
-    sector_id: Optional[uuid.UUID] = None
-    subsector_id: Optional[uuid.UUID] = None
-    capital_needed: Optional[float] = None
-
-class BusinessCreate(BusinessBase):
-    pass
-
-class BusinessResponse(BusinessBase):
-    createdAt: datetime
-    updatedAt: datetime
-
-    class Config:
-        from_attributes = True
-
-# ---- Investor Schemas ----
-class InvestorBase(BaseModel):
-    name: str
-    email: str
-    description: Optional[str] = None
-    location: Optional[str] = None
-    preference_sector: Optional[List[str]] = None
-
-class InvestorCreate(InvestorBase):
-    id: int
-
-class InvestorResponse(InvestorBase):
-    id: int
-    reasons: List[str]
-
-    class Config:
-        from_attributes = True
+class RankInvestorsRequest(BaseModel):
+    top_k: int = 10
