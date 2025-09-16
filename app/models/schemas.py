@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 import uuid
 from datetime import datetime
 
+
 # ---- Base Schemas ----
 class BusinessBase(BaseModel):
     id: Optional[uuid.UUID] = None
@@ -30,53 +31,73 @@ class BusinessBase(BaseModel):
     class Config:
         orm_mode = True
 
+
 class DealBase(BaseModel):
     title: str
     description: str
     deal_size: float
     deal_type: Optional[str] = None
 
-class InvestorBase(BaseModel):
-    name: str
-    email: str
-    description: Optional[str] = None
-    location: Optional[str] = None
-    preference_sector: Optional[List[str]] = None
 
 class RoleSchema(BaseModel):
     role_id: uuid.UUID
     name: str
+
     class Config:
         from_attributes = True
+
 
 class SectorSchema(BaseModel):
     sector_id: uuid.UUID
     name: str
+
     class Config:
         from_attributes = True
+
 
 class SubsectorSchema(BaseModel):
     subsector_id: uuid.UUID
     name: str
     sector_id: uuid.UUID
+
     class Config:
         from_attributes = True
+
 
 class SubsectorCreate(BaseModel):
     name: str
     sector_id: uuid.UUID
+
 
 class UserBase(BaseModel):
     email: str
     name: str
     description: Optional[str] = None
     location: Optional[str] = None
-    role: str = 'Investor'
+    role: str = "Investor"
     preference_sector: Optional[List[str]] = None
+    preference_region: Optional[List[str]] = None
+    total_investments: Optional[int] = None
+    average_check_size: Optional[float] = None
+    successful_exits: Optional[int] = None
+    portfolio_ipr: Optional[float] = None
+    addressable_market: Optional[str] = None
+    current_market: Optional[str] = None
+    total_assets: Optional[str] = None
+    ebitda: Optional[str] = None
+    gross_margin: Optional[str] = None
+    cac_payback_period: Optional[str] = None
+    tam: Optional[str] = None
+    sam: Optional[str] = None
+    som: Optional[str] = None
+    year_founded: Optional[str] = None
+    phone: Optional[str] = None
+
 
 # ---- Create Schemas ----
 class BusinessCreate(BusinessBase):
     capital_needed: Optional[float] = None
+
 
 class DealCreate(DealBase):
     created_by: int
@@ -84,20 +105,21 @@ class DealCreate(DealBase):
     sector_id: uuid.UUID
     subsector_id: Optional[uuid.UUID] = None
 
+
 class FeedbackCreate(BaseModel):
     investor_id: str
     business_id: str
     feedback_type: str
 
-class InvestorCreate(InvestorBase):
-    id: int
 
 class UserCreate(UserBase):
     password: str
 
+
 # ---- Update Schemas ----
 class DealStatusUpdate(BaseModel):
     status: str
+
 
 class UserUpdate(BaseModel):
     email: Optional[str] = None
@@ -105,11 +127,28 @@ class UserUpdate(BaseModel):
     description: Optional[str] = None
     location: Optional[str] = None
     preference_sector: Optional[List[str]] = None
+    preference_region: Optional[List[str]] = None
     profile_image: Optional[str] = None
     password: Optional[str] = None
+    total_investments: Optional[int] = None
+    average_check_size: Optional[float] = None
+    successful_exits: Optional[int] = None
+    portfolio_ipr: Optional[float] = None
+    addressable_market: Optional[str] = None
+    current_market: Optional[str] = None
+    total_assets: Optional[str] = None
+    ebitda: Optional[str] = None
+    gross_margin: Optional[str] = None
+    cac_payback_period: Optional[str] = None
+    tam: Optional[str] = None
+    sam: Optional[str] = None
+    som: Optional[str] = None
+    year_founded: Optional[str] = None
+    phone: Optional[str] = None
 
     class Config:
         from_attributes = True
+
 
 # ---- Response Schemas ----
 class BusinessResponse(BusinessBase):
@@ -121,6 +160,7 @@ class BusinessResponse(BusinessBase):
 
     class Config:
         orm_mode = True
+
 
 class DealResponse(DealBase):
     deal_id: uuid.UUID
@@ -137,27 +177,25 @@ class DealResponse(DealBase):
     class Config:
         from_attributes = True
 
-class InvestorResponse(InvestorBase):
-    id: int
-    reasons: List[str]
-
-    class Config:
-        from_attributes = True
 
 class RankedDeal(BaseModel):
     reasons: List[str]
     deal: DealResponse
     business: Optional[BusinessResponse] = None
 
+
 class RankedUser(BaseModel):
     reasons: List[str]
     user: UserResponse
 
+
 class RankedDealResponse(BaseModel):
     items: List[RankedDeal]
 
+
 class RankedUserResponse(BaseModel):
     items: List[RankedUser]
+
 
 class UserResponse(UserBase):
     id: int
@@ -170,6 +208,7 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+
 # ---- Other Schemas ----
 class FeedbackIn(BaseModel):
     investor_id: str
@@ -177,13 +216,16 @@ class FeedbackIn(BaseModel):
     event_type: str
     meta: Dict[str, Any] = Field(default_factory=dict)
 
+
 class UpsertResponse(BaseModel):
     ok: bool
     count: int
 
+
 # ---- Request Schemas for Ranking ----
 class RankDealsRequest(BaseModel):
     top_k: int = 10
+
 
 class RankInvestorsRequest(BaseModel):
     top_k: int = 10

@@ -10,7 +10,7 @@ from app.db.session import get_db
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     # Check if user with this email already exists
     existing_user = db.query(User).filter(User.email == user.email).first()
@@ -34,7 +34,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=400, detail="Could not create user due to data integrity issue.")
 
-@router.get("/", response_model=List[UserResponse])
+@router.get("", response_model=List[UserResponse])
 def get_all_users(db: Session = Depends(get_db), role: str = None):
     """
     Get a list of users, optionally filtered by role.

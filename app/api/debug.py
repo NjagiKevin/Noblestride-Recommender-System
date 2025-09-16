@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from app.models.db_models import Business, Investor, Sector, Subsector, User, Deal, Role
+from app.models.db_models import Business, Sector, Subsector, User, Deal, Role
 from app.models.schemas import SubsectorCreate, SubsectorSchema
 
 router = APIRouter()
@@ -18,10 +18,7 @@ router = APIRouter()
 def get_businesses(db: Session = Depends(get_db)):
     return db.query(Business).all()
 
-# ✅ Get all investors
-@router.get("/debug/investors")
-def get_investors(db: Session = Depends(get_db)):
-    return db.query(Investor).all()
+
 
 # ✅ Get all sectors
 @router.get("/debug/sectors")
@@ -52,13 +49,8 @@ def get_roles(db: Session = Depends(get_db)):
 @router.get("/debug/ids")
 def get_all_ids(db: Session = Depends(get_db)):
     businesses = db.query(Business).all()
-    investors = db.query(Investor).all()
-    sectors = db.query(Sector).all()
-    subsectors = db.query(Subsector).all()
-
     return {
         "businesses": [{"id": b.id, "name": b.legal_name} for b in businesses],
-        "investors": [{"id": i.id, "name": i.name} for i in investors],
         "sectors": [{"id": s.sector_id, "name": s.name} for s in sectors],
         "subsectors": [{"id": ss.subsector_id, "name": ss.name, "sector_id": ss.sector_id} for ss in subsectors]
     }

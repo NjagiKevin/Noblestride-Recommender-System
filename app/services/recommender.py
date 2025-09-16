@@ -38,7 +38,7 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
         return []
 
     investor_text = f"{investor.name or ''} {investor.description or ''}"
-    investor_embedding = vectorizer.vectorize_text(investor_text).reshape(1, -1)
+    investor_embedding = np.array(vectorizer.vectorize_text(investor_text)).reshape(1, -1)
 
     scores = []
     for deal in all_deals:
@@ -46,7 +46,7 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
         sector_name = deal.sector.name if deal.sector else ''
         subsector_name = deal.subsector.name if deal.subsector else ''
         deal_text = f"{deal.title or ''} {deal.description or ''} {sector_name} {subsector_name}"
-        deal_embedding = vectorizer.vectorize_text(deal_text).reshape(1, -1)
+        deal_embedding = np.array(vectorizer.vectorize_text(deal_text)).reshape(1, -1)
 
         # Match sector preferences
         if investor.preference_sector and sector_name and sector_name in (investor.preference_sector or []):
@@ -98,13 +98,13 @@ def recommend_investors_for_deal(db: Session, deal_id: UUID, top_n: int = 10) ->
     sector_name = deal.sector.name if deal.sector else ''
     subsector_name = deal.subsector.name if deal.subsector else ''
     deal_text = f"{deal.title or ''} {deal.description or ''} {sector_name} {subsector_name}"
-    deal_embedding = vectorizer.vectorize_text(deal_text).reshape(1, -1)
+    deal_embedding = np.array(vectorizer.vectorize_text(deal_text)).reshape(1, -1)
 
     scores = []
     for investor in all_investors:
         reasons = []
         investor_text = f"{investor.name or ''} {investor.description or ''}"
-        investor_embedding = vectorizer.vectorize_text(investor_text).reshape(1, -1)
+        investor_embedding = np.array(vectorizer.vectorize_text(investor_text)).reshape(1, -1)
 
         if investor.preference_sector and sector_name and sector_name in (investor.preference_sector or []):
             reasons.append(f"Invests in your sector: {sector_name}")
@@ -138,7 +138,7 @@ def recommend_investors_for_business(db: Session, business: BusinessCreate, top_
     subsector_name = business.sub_sector or ""
 
     business_text = f"{business.legal_name or ''} {business.description or ''} {sector_name} {subsector_name}"
-    business_embedding = vectorizer.vectorize_text(business_text).reshape(1, -1)
+    business_embedding = np.array(vectorizer.vectorize_text(business_text)).reshape(1, -1)
 
     all_investors = db.query(User).filter(User.role == 'Investor').all()
     if not all_investors:
@@ -148,7 +148,7 @@ def recommend_investors_for_business(db: Session, business: BusinessCreate, top_
     for investor in all_investors:
         reasons = []
         investor_text = f"{investor.name or ''} {investor.description or ''}"
-        investor_embedding = vectorizer.vectorize_text(investor_text).reshape(1, -1)
+        investor_embedding = np.array(vectorizer.vectorize_text(investor_text)).reshape(1, -1)
 
         if investor.preference_sector and sector_name and sector_name in (investor.preference_sector or []):
             reasons.append(f"Matches preferred sector: {sector_name}")

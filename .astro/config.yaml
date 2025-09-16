@@ -1,4 +1,4 @@
+airflow:
+    image: quay.io/astronomer/astro-runtime:10.1.0
 project:
     name: recommendation-service
-airflow:
-  image: quay.io/astronomer/astro-runtime:10.1.0    

@@ -4,18 +4,22 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    Float,TIMESTAMP, func,
+    Float,
+    TIMESTAMP,
+    func,
     Boolean,
     DateTime,
     ForeignKey,
     JSON,
+    Numeric,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID, ENUM
 import uuid
-from datetime import datetime # Import datetime
+from datetime import datetime
 
 from app.db.base import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -24,16 +28,44 @@ class User(Base):
     name = Column(String(255), nullable=False)
     email = Column(String(255), unique=True, nullable=False, index=True)
     profile_image = Column(String(255))
-    kyc_status = Column(ENUM('Pending', 'Verified', 'Rejected', name='enum_users_kyc_status'), default='Pending')
-    password = Column(String(255), nullable=False)
-    role = Column(ENUM('Investor', 'Administrator', 'Target Company', name='enum_users_role'), nullable=False, default='Investor')
-    role_id = Column(UUID(as_uuid=True), ForeignKey('roles.role_id'), nullable=False)
+    kyc_status = Column(
+        ENUM("Pending", "Verified", "Rejected", name="enum_users_kyc_status"),
+        default="Pending",
+    )
     preference_sector = Column(JSON)
+    preference_region = Column(JSON)
+    password = Column(String(255), nullable=False)
+    role = Column(
+        ENUM("Investor", "Administrator", "Target Company", name="enum_users_role"),
+        nullable=False,
+        default="Investor",
+    )
+    role_id = Column(UUID(as_uuid=True), ForeignKey("roles.role_id"), nullable=False)
+    status = Column(
+        ENUM("On Hold", "Open", "Closed", "Archived", name="enum_users_status"),
+        default="Open",
+    )
+    total_investments = Column(Integer)
+    average_check_size = Column(Numeric)
+    successful_exits = Column(Integer)
+    portfolio_ipr = Column(Numeric)
     description = Column(Text)
+    addressable_market = Column(String(255))
+    current_market = Column(String(255))
+    total_assets = Column(String(255))
+    ebitda = Column(String(255))
+    gross_margin = Column(String(255))
+    cac_payback_period = Column(String(255))
+    tam = Column(String(255))
+    sam = Column(String(255))
+    som = Column(String(255))
+    year_founded = Column(String(255))
     location = Column(String(255))
     phone = Column(String(255))
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updatedAt = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     deleted_at = Column(DateTime)
     parent_user_id = Column(Integer)
 
@@ -42,6 +74,7 @@ class User(Base):
     targeted_deals = relationship("Deal", foreign_keys="[Deal.target_company_id]")
     role_obj = relationship("Role", back_populates="users")
 
+
 class Deal(Base):
     __tablename__ = "deals"
 
@@ -49,16 +82,31 @@ class Deal(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=False)
     deal_size = Column(Float, nullable=False)
-    project = Column(String, ForeignKey("businesses.id"))   # FK to Business
+    project = Column(String, ForeignKey("businesses.id"))  # FK to Business
     sector_id = Column(UUID(as_uuid=True), ForeignKey("sectors.sector_id"))
     subsector_id = Column(UUID(as_uuid=True), ForeignKey("subsectors.subsector_id"))
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     target_company_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status = Column(ENUM('Active', 'Pending', 'Open', 'On Hold', 'Inactive',
-                         'Closed', 'Closed & Reopened', 'Archived',
-                         name='enum_deals_status'), default='Open')
-    visibility = Column(ENUM('Public', 'Private', name='enum_deals_visibility'), default='Public')
-    deal_type = Column(ENUM('Equity', 'Debt', 'Equity and Debt', name='enum_deals_deal_type'))
+    status = Column(
+        ENUM(
+            "Active",
+            "Pending",
+            "Open",
+            "On Hold",
+            "Inactive",
+            "Closed",
+            "Closed & Reopened",
+            "Archived",
+            name="enum_deals_status",
+        ),
+        default="Open",
+    )
+    visibility = Column(
+        ENUM("Public", "Private", name="enum_deals_visibility"), default="Public"
+    )
+    deal_type = Column(
+        ENUM("Equity", "Debt", "Equity and Debt", name="enum_deals_deal_type")
+    )
     createdAt = Column(DateTime, default=datetime.utcnow)
     updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -66,41 +114,64 @@ class Deal(Base):
     business = relationship("Business", back_populates="deals")
     sector = relationship("Sector", back_populates="deals")
     subsector = relationship("Subsector", back_populates="deals")
-    created_by_user = relationship("User", foreign_keys=[created_by], back_populates="deals")
-    target_company = relationship("User", foreign_keys=[target_company_id], back_populates="targeted_deals")
+    created_by_user = relationship(
+        "User", foreign_keys=[created_by], back_populates="deals"
+    )
+    target_company = relationship(
+        "User", foreign_keys=[target_company_id], back_populates="targeted_deals"
+    )
 
-    
+
 class Sector(Base):
     __tablename__ = "sectors"
     sector_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False, unique=True)
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updatedAt = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     deals = relationship("Deal", back_populates="sector")
     subsectors = relationship("Subsector", back_populates="sector")
-    businesses = relationship("Business", primaryjoin="foreign(Business.sector) == Sector.name", back_populates="sector_rel")
+    businesses = relationship(
+        "Business",
+        primaryjoin="foreign(Business.sector) == Sector.name",
+        back_populates="sector_rel",
+    )
+
 
 class Subsector(Base):
     __tablename__ = "subsectors"
     subsector_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
-    sector_id = Column(UUID(as_uuid=True), ForeignKey('sectors.sector_id'), nullable=False)
+    sector_id = Column(
+        UUID(as_uuid=True), ForeignKey("sectors.sector_id"), nullable=False
+    )
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updatedAt = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     sector = relationship("Sector", back_populates="subsectors")
     deals = relationship("Deal", back_populates="subsector")
-    businesses = relationship("Business", primaryjoin="foreign(Business.sub_sector) == Subsector.name", back_populates="subsector_rel")
+    businesses = relationship(
+        "Business",
+        primaryjoin="foreign(Business.sub_sector) == Subsector.name",
+        back_populates="subsector_rel",
+    )
+
 
 class Role(Base):
     __tablename__ = "roles"
     role_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False, unique=True)
     createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updatedAt = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     users = relationship("User", back_populates="role_obj")
+
 
 class Business(Base):
     __tablename__ = "businesses"
@@ -125,26 +196,26 @@ class Business(Base):
     capital_needed = Column(Float, nullable=True)
 
     createdAt = Column(
-        "createdAt", TIMESTAMP(timezone=False),
-        server_default=func.now(), nullable=False
+        "createdAt",
+        TIMESTAMP(timezone=False),
+        server_default=func.now(),
+        nullable=False,
     )
     updatedAt = Column(
-        "updatedAt", TIMESTAMP(timezone=False),
-        server_default=func.now(), onupdate=func.now(), nullable=False
+        "updatedAt",
+        TIMESTAMP(timezone=False),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
     )
     deals = relationship("Deal", back_populates="business")
-    sector_rel = relationship("Sector", primaryjoin="foreign(Business.sector) == Sector.name", back_populates="businesses")
-    subsector_rel = relationship("Subsector", primaryjoin="foreign(Business.sub_sector) == Subsector.name", back_populates="businesses")
-   
-
-
-class Investor(Base):
-    __tablename__ = "investors"
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(255), nullable=False)
-    email = Column(String(255), unique=True, nullable=False, index=True)
-    description = Column(Text)
-    location = Column(String(255))
-    preference_sector = Column(JSON)
-    createdAt = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updatedAt = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    sector_rel = relationship(
+        "Sector",
+        primaryjoin="foreign(Business.sector) == Sector.name",
+        back_populates="businesses",
+    )
+    subsector_rel = relationship(
+        "Subsector",
+        primaryjoin="foreign(Business.sub_sector) == Subsector.name",
+        back_populates="businesses",
+    )
