@@ -39,6 +39,7 @@ class User(Base):
 
     # Relationships
     deals = relationship("Deal", foreign_keys="[Deal.created_by]", back_populates="created_by_user")
+    targeted_deals = relationship("Deal", foreign_keys="[Deal.target_company_id]")
     role_obj = relationship("Role", back_populates="users")
 
 class Deal(Base):
@@ -65,6 +66,8 @@ class Deal(Base):
     business = relationship("Business", back_populates="deals")
     sector = relationship("Sector", back_populates="deals")
     subsector = relationship("Subsector", back_populates="deals")
+    created_by_user = relationship("User", foreign_keys=[created_by], back_populates="deals")
+    target_company = relationship("User", foreign_keys=[target_company_id], back_populates="targeted_deals")
 
     
 class Sector(Base):
@@ -76,7 +79,7 @@ class Sector(Base):
 
     deals = relationship("Deal", back_populates="sector")
     subsectors = relationship("Subsector", back_populates="sector")
-    businesses = relationship("Business", back_populates="sector_rel")
+    businesses = relationship("Business", primaryjoin="foreign(Business.sector) == Sector.name", back_populates="sector_rel")
 
 class Subsector(Base):
     __tablename__ = "subsectors"
@@ -88,7 +91,7 @@ class Subsector(Base):
 
     sector = relationship("Sector", back_populates="subsectors")
     deals = relationship("Deal", back_populates="subsector")
-    businesses = relationship("Business", back_populates="subsector_rel")
+    businesses = relationship("Business", primaryjoin="foreign(Business.sub_sector) == Subsector.name", back_populates="subsector_rel")
 
 class Role(Base):
     __tablename__ = "roles"
@@ -130,6 +133,8 @@ class Business(Base):
         server_default=func.now(), onupdate=func.now(), nullable=False
     )
     deals = relationship("Deal", back_populates="business")
+    sector_rel = relationship("Sector", primaryjoin="foreign(Business.sector) == Sector.name", back_populates="businesses")
+    subsector_rel = relationship("Subsector", primaryjoin="foreign(Business.sub_sector) == Subsector.name", back_populates="businesses")
    
 
 
