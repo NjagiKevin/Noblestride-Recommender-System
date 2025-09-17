@@ -7,7 +7,7 @@ from datetime import datetime
 
 # ---- Base Schemas ----
 class BusinessBase(BaseModel):
-    id: Optional[uuid.UUID] = None
+    id: Optional[str] = None
     legal_name: Optional[str] = None
     sector: Optional[str] = None
     industry: Optional[str] = None

@@ -7,7 +7,7 @@ from fastapi import Depends
 from app.db.session import get_db
 import logging
 
-from app.models.db_models import User, Deal, Sector, Subsector
+from app.models.db_models import User, Business,Deal, Sector, Subsector
 from app.models.schemas import BusinessCreate
 from app.services.embeddings import TextVectorizer
 
@@ -74,6 +74,81 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
                     "location": deal.target_company.location if deal.target_company else None,
                 }
             })
+
+    return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
+
+
+# -------------------------
+# Investor → Businesses
+# -------------------------
+def recommend_businesses_for_investor(db: Session, user_id: int, top_n: int = 10) -> List[dict]:
+    investor = db.query(User).filter(User.id == user_id, User.role == 'Investor').first()
+    if not investor:
+        raise ValueError(f"Investor with id {user_id} not found")
+
+    all_businesses = (
+        db.query(Business)
+        .options(
+            joinedload(Business.sector_rel), # Assuming Business has a relationship to Sector
+            joinedload(Business.subsector_rel), # Assuming Business has a relationship to Subsector
+        )
+        .all()
+    )
+    if not all_businesses:
+        return []
+
+    investor_text = f"{investor.name or ''} {investor.description or ''}"
+    investor_embedding = np.array(vectorizer.vectorize_text(investor_text)).reshape(1, -1)
+
+    scores = []
+    for business in all_businesses:
+        reasons = []
+        sector_name = business.sector_rel.name if business.sector_rel else ''
+        subsector_name = business.subsector_rel.name if business.subsector_rel else ''
+        business_text = f"{business.legal_name or ''} {business.description or ''} {sector_name} {subsector_name}"
+        business_embedding = np.array(vectorizer.vectorize_text(business_text)).reshape(1, -1)
+
+        # Match sector preferences
+        if investor.preference_sector and sector_name and sector_name in (investor.preference_sector or []):
+            reasons.append(f"Matches preferred sector: {sector_name}")
+
+        description_sim = cosine_similarity(investor_embedding, business_embedding)[0][0]
+        if description_sim > 0.5:
+            reasons.append("Similar focus based on description.")
+
+        score = description_sim + (0.2 if reasons else 0)
+
+        if score > 0.5:
+            scores.append({
+                "business_id": str(business.id),
+                "legal_name": business.legal_name,
+                "description": business.description,
+                "sector": sector_name,
+                "sub_sector": subsector_name,
+                "score": round(float(score), 3),
+                "reasons": reasons,
+            })
+
+    # ✅ Fallback Mode: return recent businesses if no match
+    if not scores:
+        fallback = (
+            db.query(Business)
+            .order_by(Business.createdAt.desc())
+            .limit(top_n)
+            .all()
+        )
+        return [
+            {
+                "business_id": str(biz.id),
+                "legal_name": biz.legal_name,
+                "description": biz.description,
+                "sector": biz.sector,
+                "sub_sector": biz.sub_sector,
+                "score": 0.0,
+                "reasons": ["Fallback suggestion: No strong sector/description match"]
+            }
+            for biz in fallback
+        ]
 
     return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
 
@@ -168,6 +243,27 @@ def recommend_investors_for_business(db: Session, business: BusinessCreate, top_
                 "score": round(float(score), 3),
                 "reasons": reasons
             })
+
+    # ✅ Fallback Mode: return recent investors if no match
+    if not scores:
+        fallback = (
+            db.query(User)
+            .filter(User.role == 'Investor')
+            .order_by(User.createdAt.desc())
+            .limit(top_n)
+            .all()
+        )
+        return [
+            {
+                "user_id": inv.id,
+                "name": inv.name,
+                "email": inv.email,
+                "location": inv.location,
+                "score": 0.0,
+                "reasons": ["Fallback suggestion: No strong sector/description match"]
+            }
+            for inv in fallback
+        ]
 
     return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
 

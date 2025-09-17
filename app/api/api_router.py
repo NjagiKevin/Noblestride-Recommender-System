@@ -8,8 +8,8 @@ from .deals import router as deals_router
 from .debug import router as debug_router
 from .businesses import router as businesses_router
 from .investors import router as investors_router
-
 from .sectors import router as sectors_router
+from .recommend import router as recommend_router
 
 
 # Create a single APIRouter instance
@@ -23,6 +23,6 @@ api_router.include_router(deals_router)
 api_router.include_router(debug_router)
 api_router.include_router(businesses_router)
 api_router.include_router(investors_router)
-
 api_router.include_router(sectors_router)
+api_router.include_router(recommend_router)
 
