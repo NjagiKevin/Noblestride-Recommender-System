@@ -202,6 +202,29 @@ def recommend_investors_for_deal(db: Session, deal_id: UUID, top_n: int = 10) ->
                 "reasons": reasons
             })
 
+    # ✅ Fallback Mode: return recent investors if no match
+    if not scores:
+        fallback = (
+            db.query(User)
+            .filter(User.role == 'Investor')
+            .order_by(User.createdAt.desc())
+            .limit(top_n)
+            .all()
+        )
+        return [
+            {
+                "user_id": inv.id,
+                "name": inv.name,
+                "email": inv.email,
+                "description": inv.description,
+                "location": inv.location,
+                "preference_sector": inv.preference_sector,
+                "score": 0.0,
+                "reasons": ["Fallback suggestion: No strong sector/description match"]
+            }
+            for inv in fallback
+        ]
+
     return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
 
 
