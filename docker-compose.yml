@@ -1,10 +1,3 @@
-###############################################################
-# To use Airflow locally with Astronomer, install Astro CLI:  #
-#                                                             #
-#     pip install astro-cli                                   #
-#                                                             #
-# Or see: https://docs.astronomer.io/astro/cli/install-cli    #
-###############################################################
 services:
   api:
     build: .
@@ -16,7 +9,8 @@ services:
     environment:
       - DB_HOST=db
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - .:/app  # optional: enables hot reload for dev
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -44,9 +38,10 @@ services:
       context: ./airflow-orchestrator
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8090:8080"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       - PYTHONUNBUFFERED=1
