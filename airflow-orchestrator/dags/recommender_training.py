@@ -35,7 +35,7 @@ def extract_data_from_postgres(**context):
     """
     Extract investor and business data from PostgreSQL database
     """
-    hook = PostgresHook(postgres_conn_id="recommender_postgres")
+    hook = PostgresHook(postgres_conn_id="noblestride_postgres")
     
     try:
         # Extract investors count
