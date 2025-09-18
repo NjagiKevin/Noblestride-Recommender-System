@@ -56,7 +56,11 @@ services:
       - ./airflow-orchestrator/requirements.txt:/usr/local/airflow/requirements.txt
       - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
       - ./airflow-orchestrator/.astro:/usr/local/airflow/.astro
-    command: ["astro", "dev", "start"]
+    command: >
+      bash -c "
+        pip install --no-cache-dir astro &&
+        astro dev start
+      "
 
 volumes:
   pgdata:
