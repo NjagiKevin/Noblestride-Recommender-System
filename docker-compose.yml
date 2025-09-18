@@ -1,3 +1,10 @@
+###############################################################
+# To use Airflow locally with Astronomer, install Astro CLI:  #
+#                                                             #
+#     pip install astro-cli                                   #
+#                                                             #
+# Or see: https://docs.astronomer.io/astro/cli/install-cli    #
+###############################################################
 services:
   api:
     build: .
@@ -32,6 +39,24 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  airflow:
+    build:
+      context: ./airflow-orchestrator
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./airflow-orchestrator/dags:/usr/local/airflow/dags
+      - ./airflow-orchestrator/plugins:/usr/local/airflow/plugins
+      - ./airflow-orchestrator/requirements.txt:/usr/local/airflow/requirements.txt
+      - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
+      - ./airflow-orchestrator/.astro:/usr/local/airflow/.astro
+    command: ["astro", "dev", "start"]
+
 volumes:
   pgdata:
- 
