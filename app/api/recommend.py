@@ -124,14 +124,8 @@ def get_investors_for_business(
 @router.get("/businesses/{investor_id}", response_model=List[BusinessResponse])
 def get_recommended_businesses_for_investor(investor_id: int, db: Session = Depends(get_db)):
     try:
-        recommended_businesses_data = recommend_businesses_for_investor(db, investor_id) # This now calls the service function
-
-        businesses_response_list = []
-        for business_data in recommended_businesses_data:
-            business_obj = db.query(Business).filter(Business.id == business_data['business_id']).first()
-            if business_obj:
-                businesses_response_list.append(business_obj)
-        return businesses_response_list
+        recommended_businesses = recommend_businesses_for_investor(db, investor_id)
+        return recommended_businesses
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -163,17 +157,8 @@ def get_investors_for_business_by_id(business_id: str, db: Session = Depends(get
 @router.get("/deals/{investor_id}", response_model=List[DealResponse])
 def recommend_deals_for_investor(investor_id: int, db: Session = Depends(get_db)):
     try:
-        recommended_deals_data = recommend_deals_for_user(db, investor_id)
-
-        # The service returns a list of dicts. We need to convert these to DealResponse objects.
-        # Assuming DealResponse can be directly instantiated from the Deal ORM model.
-        # We'll fetch the full Deal object using the deal_id from the recommended data.
-        deals_response_list = []
-        for deal_data in recommended_deals_data:
-            deal_obj = db.query(Deal).filter(Deal.deal_id == deal_data['deal_id']).first()
-            if deal_obj:
-                deals_response_list.append(deal_obj)
-        return deals_response_list
+        recommended_deals = recommend_deals_for_user(db, investor_id)
+        return recommended_deals
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

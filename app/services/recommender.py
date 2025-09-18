@@ -19,7 +19,8 @@ logger = logging.getLogger(__name__)
 # -------------------------
 # Investor → Deals
 # -------------------------
-def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List[dict]:
+def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List[Deal]:
+    logger.info(f"Recommending deals for user_id: {user_id}")
     investor = db.query(User).filter(User.id == user_id, User.role == 'Investor').first()
     if not investor:
         raise ValueError(f"Investor with id {user_id} not found")
@@ -34,6 +35,7 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
         .filter(Deal.status == 'Active')
         .all()
     )
+    logger.info(f"Found {len(all_deals)} active deals.")
     if not all_deals:
         return []
 
@@ -59,29 +61,33 @@ def recommend_deals_for_user(db: Session, user_id: int, top_n: int = 10) -> List
         score = description_sim + (0.2 if reasons else 0)
 
         if score > 0.5:
-            scores.append({
-                "deal_id": str(deal.deal_id),
-                "title": deal.title,
-                "description": deal.description,
-                "sector": sector_name,
-                "subsector": subsector_name,
-                "score": round(float(score), 3),
-                "reasons": reasons,
-                "business": {
-                    "id": deal.target_company.id if deal.target_company else None,
-                    "legal_name": deal.target_company.name if deal.target_company else None,
-                    "email": deal.target_company.email if deal.target_company else None,
-                    "location": deal.target_company.location if deal.target_company else None,
-                }
-            })
+            scores.append((deal, score, reasons))
 
-    return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
+    # ✅ Fallback Mode: return recent deals if no match
+    if not scores:
+        logger.info("No matching deals found, using fallback.")
+        return (
+            db.query(Deal)
+            .options(
+                joinedload(Deal.sector),
+                joinedload(Deal.subsector),
+                joinedload(Deal.target_company),
+            )
+            .filter(Deal.status == 'Active')
+            .order_by(Deal.createdAt.desc())
+            .limit(top_n)
+            .all()
+        )
+
+    scores.sort(key=lambda x: x[1], reverse=True)
+
+    return [deal for deal, score, reasons in scores[:top_n]]
 
 
 # -------------------------
 # Investor → Businesses
 # -------------------------
-def recommend_businesses_for_investor(db: Session, user_id: int, top_n: int = 10) -> List[dict]:
+def recommend_businesses_for_investor(db: Session, user_id: int, top_n: int = 10) -> List[Business]:
     investor = db.query(User).filter(User.id == user_id, User.role == 'Investor').first()
     if not investor:
         raise ValueError(f"Investor with id {user_id} not found")
@@ -119,38 +125,20 @@ def recommend_businesses_for_investor(db: Session, user_id: int, top_n: int = 10
         score = description_sim + (0.2 if reasons else 0)
 
         if score > 0.5:
-            scores.append({
-                "business_id": str(business.id),
-                "legal_name": business.legal_name,
-                "description": business.description,
-                "sector": sector_name,
-                "sub_sector": subsector_name,
-                "score": round(float(score), 3),
-                "reasons": reasons,
-            })
+            scores.append((business, score, reasons))
 
     # ✅ Fallback Mode: return recent businesses if no match
     if not scores:
-        fallback = (
+        return (
             db.query(Business)
             .order_by(Business.createdAt.desc())
             .limit(top_n)
             .all()
         )
-        return [
-            {
-                "business_id": str(biz.id),
-                "legal_name": biz.legal_name,
-                "description": biz.description,
-                "sector": biz.sector,
-                "sub_sector": biz.sub_sector,
-                "score": 0.0,
-                "reasons": ["Fallback suggestion: No strong sector/description match"]
-            }
-            for biz in fallback
-        ]
 
-    return sorted(scores, key=lambda x: x["score"], reverse=True)[:top_n]
+    scores.sort(key=lambda x: x[1], reverse=True)
+    
+    return [business for business, score, reasons in scores[:top_n]]
 
 
 # -------------------------
