@@ -39,7 +39,7 @@ services:
       - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
  
     entrypoint: bash
-    command: ["-c", "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && airflow db init"]
+    command: ["-c", "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && airflow db migrate"]
     networks:
       - noblestride-network
 
