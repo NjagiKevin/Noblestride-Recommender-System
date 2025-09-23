@@ -11,6 +11,7 @@ from .investors import router as investors_router
 from .sectors import router as sectors_router
 from .recommend import router as recommend_router
 from .model import router as model_router
+from .ml_ops import router as ml_ops_router
 
 
 # Create a single APIRouter instance
@@ -27,4 +28,5 @@ api_router.include_router(investors_router)
 api_router.include_router(sectors_router)
 api_router.include_router(recommend_router)
 api_router.include_router(model_router)
+api_router.include_router(ml_ops_router)
 
