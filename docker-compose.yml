@@ -31,7 +31,6 @@ services:
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
       - PYTHONUNBUFFERED=1
-      - AIRFLOW_CONN_AIRFLOW_DB=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
     volumes:
       - ./airflow-orchestrator/dags:/usr/local/airflow/dags
       - ./airflow-orchestrator/plugins:/usr/local/airflow/plugins
@@ -39,7 +38,7 @@ services:
       - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
  
     entrypoint: bash
-    command: ["-c", "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && sleep 10 && airflow db init && airflow roles create Admin && airflow users create -u admin -f admin -l user -r Admin -e admin@example.com -p admin && airflow webserver"]
+    command: ["-c", "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && airflow db init"]
     networks:
       - noblestride-network
 
