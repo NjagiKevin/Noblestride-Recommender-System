@@ -1,8 +1,11 @@
+version: '3.8'
+
 networks:
   noblestride-network:
     external: true
 
 services:
+  # 🚀 FastAPI app
   api:
     build: .
     container_name: recommender_api
@@ -13,17 +16,17 @@ services:
     environment:
       - DB_HOST=${API_DB_HOST}
     volumes:
-      - .:/app  # optional: enables hot reload for dev
+      - .:/app  # Enables hot reload for dev
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     networks:
       - noblestride-network
 
- 
-
-  airflow:
+  # 🌐 Airflow Webserver
+  airflow-webserver:
     build:
       context: ./airflow-orchestrator
       dockerfile: Dockerfile
+    container_name: airflow_webserver
     ports:
       - "8090:8080"
     env_file:
@@ -31,18 +34,42 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - AIRFLOW_HOME=/opt/airflow
-      - AIRFLOW_DATABASE_SQL_ALCHEMY_CONN=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
       - AIRFLOW_CONN_AIRFLOW_DB=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
       - AIRFLOW_CONN_POSTGRES_DEFAULT=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
-      - AIRFLOW_DATABASE_URL=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
     volumes:
-      - ./airflow-orchestrator/dags:/usr/local/airflow/dags
+      - ./airflow-orchestrator/dags:/opt/airflow/dags
       - ./airflow-orchestrator/plugins:/usr/local/airflow/plugins
       - ./airflow-orchestrator/requirements.txt:/usr/local/airflow/requirements.txt
       - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
- 
     entrypoint: /entrypoint.sh
     command: airflow webserver
+    depends_on:
+      - airflow-scheduler
+    networks:
+      - noblestride-network
+
+  # ⏰ Airflow Scheduler
+  airflow-scheduler:
+    build:
+      context: ./airflow-orchestrator
+      dockerfile: Dockerfile
+    container_name: airflow_scheduler
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AIRFLOW_HOME=/opt/airflow
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
+    volumes:
+      - ./airflow-orchestrator/dags:/opt/airflow/dags
+      - ./airflow-orchestrator/plugins:/usr/local/airflow/plugins
+      - ./airflow-orchestrator/requirements.txt:/usr/local/airflow/requirements.txt
+      - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
+    entrypoint: /entrypoint.sh
+    command: airflow scheduler
     networks:
       - noblestride-network
 
