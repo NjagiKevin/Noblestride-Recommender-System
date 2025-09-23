@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-# Wait for the database to be ready (optional, but good practice)
-sleep 10
-
 # Initialize the Airflow database
 airflow db init
 
