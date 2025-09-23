@@ -1,3 +1,7 @@
+networks:
+  noblestride-network:
+    external: true
+
 services:
   api:
     build: .
@@ -11,6 +15,8 @@ services:
     volumes:
       - .:/app  # optional: enables hot reload for dev
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - noblestride-network
 
  
 
@@ -33,10 +39,14 @@ services:
  
     command: >
       bash -c "
-      airflow db migrate &&
-      airflow users create -u admin -f admin -l user -r Admin -e admin@example.com -p admin &&
+      sleep 10 && \
+      airflow db init && \
+      airflow roles create Admin && \
+      airflow users create -u admin -f admin -l user -r Admin -e admin@example.com -p admin &&\
       airflow webserver
       "
+    networks:
+      - noblestride-network
 
 volumes:
   pgdata:
