@@ -39,13 +39,7 @@ services:
       - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
  
     entrypoint: bash
-    command: >
-      -c "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && \
-      airflow db init && \
-      airflow roles create Admin && \
-      airflow users create -u admin -f admin -l user -r Admin -e admin@example.com -p admin &&\
-      airflow webserver
-      "    networks:
+    command: ["-c", "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && sleep 10 && airflow db init && airflow roles create Admin && airflow users create -u admin -f admin -l user -r Admin -e admin@example.com -p admin && airflow webserver"]
       - noblestride-network
 
 volumes:
