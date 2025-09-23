@@ -38,8 +38,9 @@ services:
       - ./airflow-orchestrator/requirements.txt:/usr/local/airflow/requirements.txt
       - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
  
+    entrypoint: bash
     command: >
-      bash -c "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && \
+      -c "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && \
       sleep 10 && \
       airflow db init && \
       airflow roles create Admin && \
