@@ -31,6 +31,7 @@ services:
     environment:
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
       - PYTHONUNBUFFERED=1
+      - AIRFLOW_CONN_AIRFLOW_DB=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
     volumes:
       - ./airflow-orchestrator/dags:/usr/local/airflow/dags
       - ./airflow-orchestrator/plugins:/usr/local/airflow/plugins
