@@ -39,16 +39,12 @@ services:
  
     command: >
       bash -c "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && \
-      echo "PATH: $PATH" && \
-      ls -l /usr/local/bin && \
-      ls -l /usr/bin && \
       sleep 10 && \
       airflow db init && \
       airflow roles create Admin && \
       airflow users create -u admin -f admin -l user -r Admin -e admin@example.com -p admin &&\
       airflow webserver
-      "
-    networks:
+      "    networks:
       - noblestride-network
 
 volumes:
