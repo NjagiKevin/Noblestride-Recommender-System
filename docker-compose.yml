@@ -6,32 +6,13 @@ services:
       - "8010:8000"
     env_file:
       - .env
-    depends_on:
-      db:
-        condition: service_healthy
+    environment:
+      - DB_HOST=${API_DB_HOST}
     volumes:
       - .:/app  # optional: enables hot reload for dev
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  db:
-    image: postgres:15
-    container_name: recommender_db
-    restart: always
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "5430:5432"
-    env_file:
-      - .env
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+ 
 
   airflow:
     build:
@@ -41,19 +22,21 @@ services:
       - "8090:8080"
     env_file:
       - .env
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@${AIRFLOW_DB_HOST}:${AIRFLOW_DB_PORT}/${AIRFLOW_DB_NAME}
       - PYTHONUNBUFFERED=1
     volumes:
       - ./airflow-orchestrator/dags:/usr/local/airflow/dags
       - ./airflow-orchestrator/plugins:/usr/local/airflow/plugins
       - ./airflow-orchestrator/requirements.txt:/usr/local/airflow/requirements.txt
       - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
-      - ./airflow-orchestrator/.astro:/usr/local/airflow/.astro
-    command: airflow webserver
+ 
+    command: >
+      bash -c "
+      airflow db migrate &&
+      airflow users create -u admin -f admin -l user -r Admin -e admin@example.com -p admin &&
+      airflow webserver
+      "
 
 volumes:
   pgdata:
