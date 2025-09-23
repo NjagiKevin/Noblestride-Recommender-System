@@ -37,8 +37,8 @@ services:
       - ./airflow-orchestrator/requirements.txt:/usr/local/airflow/requirements.txt
       - ./airflow-orchestrator/packages.txt:/usr/local/airflow/packages.txt
  
-    entrypoint: bash
-    command: ["-c", "export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH && airflow db migrate"]
+    entrypoint: /entrypoint.sh
+    command: airflow webserver
     networks:
       - noblestride-network
 
