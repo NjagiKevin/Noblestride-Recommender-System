@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Initialize the Airflow database
-airflow db init
+airflow db upgrade
 
 # Create Admin role
 airflow roles create Admin
