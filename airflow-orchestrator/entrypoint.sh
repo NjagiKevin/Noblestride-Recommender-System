@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
-# Initialize the Airflow database
+# Delete default connections that might be overriding our settings
+airflow connections delete --conn-id postgres_default || true
+airflow connections delete --conn-id airflow_db || true
+
+# Upgrade the Airflow database
 airflow db upgrade
 
 # Create Admin role
