@@ -39,6 +39,9 @@ services:
  
     command: >
       bash -c "
+      echo "PATH: $PATH" && \
+      ls -l /usr/local/bin && \
+      ls -l /usr/bin && \
       sleep 10 && \
       airflow db init && \
       airflow roles create Admin && \
