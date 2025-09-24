@@ -16,6 +16,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Force CPU-only execution for torch
+ENV CUDA_VISIBLE_DEVICES=-1
+
 # Copy and install Python dependencies first (for Docker layer caching)
 COPY requirements.txt .
 RUN pip install --upgrade pip --no-cache-dir && \

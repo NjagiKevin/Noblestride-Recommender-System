@@ -10,7 +10,7 @@ services:
     volumes:
       - postgres_airflow:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "5437:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U airflow -d airflow"]
@@ -29,7 +29,7 @@ services:
     volumes:
       - postgres_mlflow:/var/lib/postgresql/data
     ports:
-      - "5434:5432"
+      - "5438:5432"
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mlflow -d mlflow"]
@@ -58,10 +58,11 @@ services:
     image: python:3.11-slim
     container_name: mlflow_server
     ports:
-      - "5000:5000"
+      - "5001:5000"
     environment:
       - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow:mlflow_pass@mlflow-db:5432/mlflow
       - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+      - GUNICORN_CMD_ARGS=--bind=0.0.0.0:5000
     volumes:
       - mlflow_artifacts:/mlflow/artifacts
     command: >

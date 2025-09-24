@@ -14,10 +14,10 @@ case "${1:-start}" in
         echo "📋 Access URLs:"
         echo "  • API Documentation: http://localhost:8010/docs"
         echo "  • Airflow Web UI:    http://localhost:8090 (admin/admin123)"
-        echo "  • MLflow Tracking:   http://localhost:5000"
+        echo "  • MLflow Tracking:   http://localhost:5001"
         echo "  • Main Database:     Uses your existing Noblestride DB"
-        echo "  • Airflow DB:        Internal Docker (port 5433)"
-        echo "  • MLflow DB:         Internal Docker (port 5434)"
+        echo "  • Airflow DB:        Internal Docker (port 5437)"
+        echo "  • MLflow DB:         Internal Docker (port 5438)"
         echo "  • Redis Cache:       localhost:6380 (password: redis_pass)"
         ;;
     stop)

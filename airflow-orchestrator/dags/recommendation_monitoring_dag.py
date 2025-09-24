@@ -19,9 +19,11 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator, BranchPythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.operators.dummy import DummyOperator
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
 from airflow.providers.http.operators.http import SimpleHttpOperator
-from airflow.sensors.s3_key_sensor import S3KeySensor
+# S3 sensor import removed to avoid broken DAG if provider is missing
+# from airflow.providers.amazon.aws.sensors.s3 import S3KeySensor
 from airflow.utils.dates import days_ago
 from airflow.utils.task_group import TaskGroup
 from airflow.models import Variable
@@ -36,14 +38,36 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Default arguments
+# Task callbacks for better observability
+def task_failure_callback(context):
+    try:
+        ti = context.get('task_instance')
+        logger.error(
+            f"Task failed: dag_id={context.get('dag').dag_id}, task_id={ti.task_id}, run_id={context.get('run_id')}, try_number={ti.try_number}"
+        )
+    except Exception as _:
+        logger.error("Task failed and failure callback encountered an error.")
+
+def task_success_callback(context):
+    try:
+        ti = context.get('task_instance')
+        logger.info(
+            f"Task succeeded: dag_id={context.get('dag').dag_id}, task_id={ti.task_id}, run_id={context.get('run_id')}"
+        )
+    except Exception as _:
+        logger.info("Task succeeded and success callback encountered an error.")
+
 default_args = {
-    'owner': 'noblestride-ai',
+'owner': 'webmasters_ml',
     'depends_on_past': False,
     'start_date': days_ago(1),
-    'email_on_failure': True,
+'email_on_failure': True,
+    'email': ['k.kamau@webmasters.co.ke'],
     'email_on_retry': False,
     'retries': 1,
     'retry_delay': timedelta(minutes=3),
+    'on_failure_callback': task_failure_callback,
+    'on_success_callback': task_success_callback,
 }
 
 # DAG definition
@@ -54,7 +78,7 @@ dag = DAG(
     schedule_interval='@hourly',  # Run every hour
     max_active_runs=1,
     catchup=False,
-    tags=['monitoring', 'recommendation', 'production', 'data-quality'],
+tags=['monitoring', 'recommendation', 'production', 'data-quality', 'noblestride'],
     doc_md=__doc__,
 )
 
@@ -321,10 +345,17 @@ detect_drift_task = BranchPythonOperator(
     dag=dag,
 )
 
-# Conditional tasks based on drift detection
-trigger_retraining_task = PythonOperator(
+# Conditional tasks based on drift detection - trigger the training DAG
+trigger_retraining_task = TriggerDagRunOperator(
     task_id='trigger_retraining',
-    python_callable=trigger_retraining_pipeline,
+    trigger_dag_id='recommendation_training_pipeline',
+    conf={
+        'trigger_reason': 'model_drift_detected',
+        'triggered_by': 'monitoring_dag',
+        'trigger_time': '{{ ts }}'
+    },
+    wait_for_completion=False,
+    reset_dag_run=False,
     dag=dag,
 )
 
@@ -362,7 +393,5 @@ detect_drift_task >> [trigger_retraining_task, no_action_task]
 
 [trigger_retraining_task, no_action_task] >> dashboard_group >> end_monitoring
 
-# Set internal task dependencies
-data_quality_group >> check_data_quality_task
-performance_group >> monitor_performance_task
-dashboard_group >> update_dashboard_task >> send_alerts_task
+# Set internal task dependencies (order tasks within groups only)
+update_dashboard_task >> send_alerts_task

@@ -1,8 +1,12 @@
 from __future__ import annotations
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
+from pydantic import BaseModel, Field, model_validator
 import uuid
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from typing import ForwardRef
+    UserResponse = ForwardRef('UserResponse')
 
 
 # ---- Base Schemas ----
@@ -29,7 +33,7 @@ class BusinessBase(BaseModel):
     updatedAt: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class DealBase(BaseModel):
@@ -159,7 +163,21 @@ class BusinessResponse(BusinessBase):
     capital_needed: Optional[float]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
+
+# Define UserResponse before DealResponse to avoid forward-reference issues
+
+class UserResponse(UserBase):
+    id: int
+    profile_image: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime
+    role_id: uuid.UUID
+    role_obj: RoleSchema
+
+    class Config:
+        from_attributes = True
 
 
 class DealResponse(DealBase):
@@ -186,7 +204,7 @@ class RankedDeal(BaseModel):
 
 class RankedUser(BaseModel):
     reasons: List[str]
-    user: UserResponse
+    user: "UserResponse"
 
 
 class RankedDealResponse(BaseModel):
@@ -197,16 +215,6 @@ class RankedUserResponse(BaseModel):
     items: List[RankedUser]
 
 
-class UserResponse(UserBase):
-    id: int
-    profile_image: Optional[str] = None
-    createdAt: datetime
-    updatedAt: datetime
-    role_id: uuid.UUID
-    role_obj: RoleSchema
-
-    class Config:
-        from_attributes = True
 
 
 # ---- Other Schemas ----
@@ -229,3 +237,9 @@ class RankDealsRequest(BaseModel):
 
 class RankInvestorsRequest(BaseModel):
     top_k: int = 10
+
+
+# Rebuild models to resolve forward references
+DealResponse.model_rebuild()
+RankedUser.model_rebuild()
+RankedDeal.model_rebuild()

@@ -8,6 +8,11 @@ import uuid
 from app.models.db_models import Deal, Sector, Subsector
 from app.models.schemas import DealResponse, DealCreate, DealStatusUpdate
 from app.db.session import get_db
+from app.models import schemas
+
+# Ensure forward refs in response models are resolved before FastAPI inspects them
+schemas.UserResponse.model_rebuild(_types_namespace=vars(schemas))
+schemas.DealResponse.model_rebuild(_types_namespace=vars(schemas))
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 

@@ -11,16 +11,19 @@ import json
 logger = logging.getLogger(__name__)
 
 default_args = {
-    "owner": "recommendation-team",
+    "owner": "webmasters_ml",
     "depends_on_past": False,
     "retries": 2,
     "retry_delay": timedelta(minutes=5),
+    "email_on_failure": True,
+    "email_on_retry": False,
+    "email": ["k.kamau@webmasters.co.ke"],
 }
 
 def check_fastapi_health(**context):
     """Check if FastAPI service is healthy before starting the pipeline"""
     try:
-        fastapi_base_url = Variable.get("FASTAPI_BASE_URL", default_var="http://host.docker.internal:8010")
+        fastapi_base_url = Variable.get("FASTAPI_BASE_URL", default_var="http://api:8000")
         response = requests.get(f"{fastapi_base_url}/health", timeout=30)
         response.raise_for_status()
         health_data = response.json()
@@ -74,7 +77,7 @@ def call_fastapi_preprocessing(**context):
         businesses_count = context["ti"].xcom_pull(key="businesses_count", task_ids="extract_data")
         
         # Prepare data for API call
-        fastapi_base_url = Variable.get("FASTAPI_BASE_URL")
+        fastapi_base_url = Variable.get("FASTAPI_BASE_URL", default_var="http://api:8000")
         
         # Simulate preprocessing
         processed_data = {
@@ -123,6 +126,7 @@ def train_model_via_fastapi(**context):
             response = requests.post(
                 f"{fastapi_base_url}/api/model/training-complete",
                 json=model_metadata,
+                headers={"Content-Type": "application/json", "Idempotency-Key": model_metadata.get("model_version", "")},
                 timeout=30
             )
             if response.status_code == 200:
@@ -148,7 +152,7 @@ with DAG(
     start_date=datetime(2025, 9, 18),
     schedule_interval="0 2 * * *",  # Daily at 2 AM
     catchup=False,
-    tags=["ml", "recommender", "fastapi", "training"],
+    tags=["ml", "recommender", "fastapi", "training", "noblestride"],
     max_active_runs=1,
 ) as dag:
 

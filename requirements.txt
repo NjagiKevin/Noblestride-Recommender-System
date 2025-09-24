@@ -17,6 +17,11 @@ pandas==2.1.4
 numpy==1.24.3
 scipy==1.11.4
 
+# CPU-only PyTorch for sentence-transformers
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.2.2
+sentence-transformers==2.2.2
+
 # MLflow for ML model tracking
 mlflow==2.8.1
 

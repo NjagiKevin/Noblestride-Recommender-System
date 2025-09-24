@@ -7,6 +7,10 @@ from sqlalchemy.exc import IntegrityError
 from app.models.db_models import User, Role, Deal, Sector
 from app.models.schemas import UserResponse, UserCreate
 from app.db.session import get_db
+from app.models import schemas
+
+# Ensure forward refs for UserResponse are resolved before FastAPI inspects them
+schemas.UserResponse.model_rebuild(_types_namespace=vars(schemas))
 
 router = APIRouter(prefix="/users", tags=["users"])
 

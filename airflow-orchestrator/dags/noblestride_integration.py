@@ -11,10 +11,13 @@ import json
 logger = logging.getLogger(__name__)
 
 default_args = {
-    "owner": "noblestride-team",
+    "owner": "webmasters_ml",
     "depends_on_past": False,
     "retries": 1,
     "retry_delay": timedelta(minutes=3),
+    "email_on_failure": True,
+    "email_on_retry": False,
+    "email": ["k.kamau@webmasters.co.ke"],
 }
 
 def check_services_health(**context):

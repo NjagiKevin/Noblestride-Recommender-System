@@ -4,23 +4,30 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from app.db.session import SessionLocal
 from app.core.logging import logger
-from sentence_transformers import SentenceTransformer
 
 class TextVectorizer:
-    def __init__(self, model_name: str = 'all-MiniLM-L6-v2'):
+    def __init__(self, model_name: str = 'all-MiniLM-L6-v2', device: str = 'cpu'):
         """
-        Initialize the text vectorizer with a pre-trained model
+        Initialize the text vectorizer with lazy model loading (CPU-only)
         
         Args:
             model_name: Name of the SentenceTransformer model to use
+            device: Device to load the model on ('cpu')
         """
-        try:
-            self.model = SentenceTransformer(model_name)
-            logger.info(f"Loaded text vectorization model: {model_name}")
-        except Exception as e:
-            logger.error(f"Failed to load model {model_name}: {str(e)}")
-            # Raise the error to prevent the application from starting with a broken vectorizer
-            raise
+        self.model_name = model_name
+        self.device = device
+        self.model = None  # Lazy-load on first use
+
+    def _ensure_model(self):
+        if self.model is None:
+            try:
+                from sentence_transformers import SentenceTransformer
+                self.model = SentenceTransformer(self.model_name, device=self.device)
+                logger.info(f"Loaded text vectorization model: {self.model_name} on {self.device}")
+            except Exception as e:
+                logger.error(f"Failed to load model {self.model_name} on {self.device}: {str(e)}")
+                # Re-raise so callers can handle appropriately
+                raise
     
     def vectorize_text(self, text: str) -> List[float]:
         """
@@ -32,12 +39,15 @@ class TextVectorizer:
         Returns:
             List of floats representing the text embedding
         """
+        # Ensure model is available (lazy-load)
+        self._ensure_model()
+
         if not text or not isinstance(text, str):
             # Return a zero vector of the correct dimension if input is invalid
             return [0.0] * self.model.get_sentence_embedding_dimension()
         
         try:
-            embedding = self.model.encode([text])[0]
+            embedding = self.model.encode([text], convert_to_numpy=True, device=self.device)[0]
             return embedding.tolist()
         except Exception as e:
             logger.error(f"Error vectorizing text: {str(e)}")
@@ -57,8 +67,11 @@ class TextVectorizer:
         if not texts:
             return []
         
+        # Ensure model is available (lazy-load)
+        self._ensure_model()
+        
         try:
-            embeddings = self.model.encode(texts)
+            embeddings = self.model.encode(texts, convert_to_numpy=True, device=self.device)
             return embeddings.tolist()
         except Exception as e:
             logger.error(f"Error vectorizing batch: {str(e)}")
@@ -71,11 +84,12 @@ class TextVectorizer:
         Returns:
             Integer representing the embedding dimension
         """
+        # Ensure model is available (lazy-load)
+        self._ensure_model()
         return self.model.get_sentence_embedding_dimension()
 
-# Create a global instance for easy access. This must be done *after* the class is defined.
-# Placing this line here ensures it's initialized when the module is first imported.
-text_vectorizer = TextVectorizer()
+# Create a global instance for easy access (lazy-loaded model)
+text_vectorizer = TextVectorizer(device='cpu')
 
 def generate_embeddings(text: str) -> List[float]:
     """Generate embeddings for a given text using the TextVectorizer"""
