@@ -88,16 +88,18 @@ def get_investor_recommendations_for_business(
 def get_investors_for_business(
     business: BusinessCreate,
     request: RankInvestorsRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    offset: int = 0,
 ):
     """
     Get investor recommendations for a business based on matching criteria.
     """
     try:
-        rankings = recommend_investors_for_business(db, business, top_n=request.top_k)
+        fetch_n = max(request.top_k + offset, request.top_k)
+        rankings = recommend_investors_for_business(db, business, top_n=fetch_n)
 
         response_items = []
-        for item in rankings:
+        for item in rankings[offset:offset+request.top_k]:
             user_obj = (
                 db.query(User)
                 .options(joinedload(User.role_obj))
@@ -122,10 +124,17 @@ def get_investors_for_business(
 
 # ✅ Recommend businesses for a given investor
 @router.get("/businesses/{investor_id}", response_model=List[BusinessResponse])
-def get_recommended_businesses_for_investor(investor_id: int, db: Session = Depends(get_db)):
+def get_recommended_businesses_for_investor(
+    investor_id: int,
+    top_k: int = 10,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
     try:
-        recommended_businesses = recommend_businesses_for_investor(db, investor_id)
-        return recommended_businesses
+        # fetch more to support offset
+        fetch_n = max(top_k + offset, top_k)
+        recommended_businesses = recommend_businesses_for_investor(db, investor_id, top_n=fetch_n)
+        return recommended_businesses[offset:offset+top_k]
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -138,7 +147,12 @@ def get_recommended_businesses_for_investor(investor_id: int, db: Session = Depe
 
 # ✅ Recommend investors for a given business
 @router.get("/investors/{business_id}", response_model=List[UserResponse])
-def get_investors_for_business_by_id(business_id: str, db: Session = Depends(get_db)):
+def get_investors_for_business_by_id(
+    business_id: str,
+    top_k: int = 10,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
     business = db.query(Business).filter(Business.id == business_id).first()
     if not business:
         raise HTTPException(status_code=404, detail="Business not found")
@@ -147,18 +161,24 @@ def get_investors_for_business_by_id(business_id: str, db: Session = Depends(get
     
     recommended_investors = []
     for investor in all_investors:
-        if investor.preference_sector and business.sector in investor.preference_sector:
+        if investor.preference_sector and business.sector in (investor.preference_sector or []):
             recommended_investors.append(investor)
 
-    return recommended_investors
+    return recommended_investors[offset:offset+top_k]
 
 
 # ✅ Recommend deals for a given investor
 @router.get("/deals/{investor_id}", response_model=List[DealResponse])
-def recommend_deals_for_investor(investor_id: int, db: Session = Depends(get_db)):
+def recommend_deals_for_investor(
+    investor_id: int,
+    top_k: int = 10,
+    offset: int = 0,
+    db: Session = Depends(get_db)
+):
     try:
-        recommended_deals = recommend_deals_for_user(db, investor_id)
-        return recommended_deals
+        fetch_n = max(top_k + offset, top_k)
+        recommended_deals = recommend_deals_for_user(db, investor_id, top_n=fetch_n)
+        return recommended_deals[offset:offset+top_k]
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:

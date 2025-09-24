@@ -28,6 +28,22 @@ class TextVectorizer:
                 logger.error(f"Failed to load model {self.model_name} on {self.device}: {str(e)}")
                 # Re-raise so callers can handle appropriately
                 raise
+
+    def status(self) -> dict:
+        """Return status of vectorizer without forcing load."""
+        loaded = self.model is not None
+        dim = None
+        try:
+            if loaded:
+                dim = self.model.get_sentence_embedding_dimension()
+        except Exception:
+            dim = None
+        return {
+            "loaded": loaded,
+            "model_name": self.model_name,
+            "device": self.device,
+            "dimension": dim,
+        }
     
     def vectorize_text(self, text: str) -> List[float]:
         """
@@ -90,6 +106,9 @@ class TextVectorizer:
 
 # Create a global instance for easy access (lazy-loaded model)
 text_vectorizer = TextVectorizer(device='cpu')
+
+def get_embeddings_status() -> dict:
+    return text_vectorizer.status()
 
 def generate_embeddings(text: str) -> List[float]:
     """Generate embeddings for a given text using the TextVectorizer"""

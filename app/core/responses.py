@@ -1,6 +1,7 @@
 from fastapi.responses import JSONResponse
-from typing import Any
+from typing import Any, Optional, Dict
 import json
+
 
 def remove_none_from_dict(obj):
     if isinstance(obj, dict):
@@ -9,6 +10,7 @@ def remove_none_from_dict(obj):
         return [remove_none_from_dict(elem) for elem in obj]
     else:
         return obj
+
 
 class NoneExcludingJSONResponse(JSONResponse):
     def render(self, content: Any) -> bytes:
@@ -20,3 +22,15 @@ class NoneExcludingJSONResponse(JSONResponse):
             indent=None,
             separators=(",", ":"),
         ).encode("utf-8")
+
+
+def create_response(data: Any = None, message: str = "", meta: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Standard API response envelope used across the service."""
+    envelope = {
+        "success": True,
+        "message": message,
+        "data": data if data is not None else {},
+    }
+    if meta is not None:
+        envelope["meta"] = meta
+    return envelope

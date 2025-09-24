@@ -26,14 +26,13 @@ except ImportError:
     mlflow = None
     MlflowClient = None
 
-from app.core.config import get_settings
+from app.core.config import settings
 from app.core.responses import create_response
 
 # Setup logging
 logger = logging.getLogger(__name__)
 
-# Get configuration
-settings = get_settings()
+# Get configuration (already loaded as 'settings')
 
 # Router setup
 router = APIRouter(
