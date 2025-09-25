@@ -16,7 +16,11 @@ class Settings(BaseSettings):
 
     def __init__(self, **values):
         super().__init__(**values)
-        self.DATABASE_URL = f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+        # Respect DATABASE_URL if provided via environment; otherwise build one from individual DB_* parts
+        if not self.DATABASE_URL:
+            self.DATABASE_URL = (
+                f"postgresql+psycopg2://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+            )
 
     class Config:
         env_file = ".env"

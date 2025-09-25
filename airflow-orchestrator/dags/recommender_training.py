@@ -1,5 +1,5 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.http.hooks.http import HttpHook
 from airflow.models import Variable
@@ -34,13 +34,14 @@ def check_fastapi_health(**context):
         raise
 
 
-def extract_data_from_postgres(**context):
+def extract_data_from_postgres():
     """
     Extract investor and business data from PostgreSQL database
     """
     hook = PostgresHook(postgres_conn_id="noblestride_postgres")
     
     try:
+        ctx = get_current_context()
         # Extract investors count
         sql_investors = "SELECT COUNT(*) as count FROM investors;"
         conn = hook.get_conn()
@@ -54,8 +55,8 @@ def extract_data_from_postgres(**context):
         businesses_count = cursor.fetchone()[0]
         
         # Push counts to XCom (simplified approach)
-        context["ti"].xcom_push(key="investors_count", value=investors_count)
-        context["ti"].xcom_push(key="businesses_count", value=businesses_count)
+        ctx["ti"].xcom_push(key="investors_count", value=investors_count)
+        ctx["ti"].xcom_push(key="businesses_count", value=businesses_count)
         
         logger.info(f"✅ Found {investors_count} investors and {businesses_count} businesses")
         
@@ -67,14 +68,15 @@ def extract_data_from_postgres(**context):
         raise
 
 
-def call_fastapi_preprocessing(**context):
+def call_fastapi_preprocessing():
     """
     Call FastAPI endpoint for data preprocessing
     """
     try:
+        ctx = get_current_context()
         # Get data counts from previous task
-        investors_count = context["ti"].xcom_pull(key="investors_count", task_ids="extract_data")
-        businesses_count = context["ti"].xcom_pull(key="businesses_count", task_ids="extract_data")
+        investors_count = ctx["ti"].xcom_pull(key="investors_count", task_ids="extract_data")
+        businesses_count = ctx["ti"].xcom_pull(key="businesses_count", task_ids="extract_data")
         
         # Prepare data for API call
         fastapi_base_url = Variable.get("FASTAPI_BASE_URL", default_var="http://api:8000")
@@ -87,7 +89,7 @@ def call_fastapi_preprocessing(**context):
             "preprocessing_timestamp": datetime.now().isoformat()
         }
         
-        context["ti"].xcom_push(key="preprocessing_metadata", value=processed_data)
+        ctx["ti"].xcom_push(key="preprocessing_metadata", value=processed_data)
         
         logger.info(f"✅ Data preprocessing completed: {processed_data}")
         
@@ -96,12 +98,13 @@ def call_fastapi_preprocessing(**context):
         raise
 
 
-def train_model_via_fastapi(**context):
+def train_model_via_fastapi():
     """
     Trigger model training via FastAPI endpoint or train locally
     """
     try:
-        preprocessing_metadata = context["ti"].xcom_pull(key="preprocessing_metadata", task_ids="preprocess_data")
+        ctx = get_current_context()
+        preprocessing_metadata = ctx["ti"].xcom_pull(key="preprocessing_metadata", task_ids="preprocess_data")
         
         # For this example, we'll simulate model training
         fastapi_base_url = Variable.get("FASTAPI_BASE_URL")
@@ -137,7 +140,7 @@ def train_model_via_fastapi(**context):
             logger.warning(f"⚠️  Could not notify FastAPI: {e}")
         
         logger.info(f"✅ Model training completed: {model_metadata}")
-        context["ti"].xcom_push(key="model_metadata", value=model_metadata)
+        ctx["ti"].xcom_push(key="model_metadata", value=model_metadata)
         
     except Exception as e:
         logger.error(f"❌ Model training failed: {str(e)}")
@@ -160,14 +163,12 @@ with DAG(
     health_check = PythonOperator(
         task_id="check_fastapi_health",
         python_callable=check_fastapi_health,
-        provide_context=True,
     )
 
     # Task 2: Extract data
     extract_data = PythonOperator(
         task_id="extract_data",
         python_callable=extract_data_from_postgres,
-        provide_context=True,
         pool="ml_training_pool",
     )
 
@@ -175,7 +176,6 @@ with DAG(
     preprocess_data = PythonOperator(
         task_id="preprocess_data",
         python_callable=call_fastapi_preprocessing,
-        provide_context=True,
         pool="ml_training_pool",
     )
 
@@ -183,7 +183,6 @@ with DAG(
     train_model = PythonOperator(
         task_id="train_model",
         python_callable=train_model_via_fastapi,
-        provide_context=True,
         pool="ml_training_pool",
     )
 

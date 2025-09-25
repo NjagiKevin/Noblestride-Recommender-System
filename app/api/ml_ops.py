@@ -17,6 +17,7 @@ import json
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from pydantic import ConfigDict
 import requests
 try:
     import mlflow
@@ -65,6 +66,7 @@ class MLExperimentRequest(BaseModel):
     tags: Optional[Dict[str, str]] = Field(default_factory=dict, description="Tags for the experiment")
 
 class ModelRegistrationRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     model_name: str = Field(..., description="Name of the model")
     model_version: str = Field(..., description="Version of the model")
     stage: str = Field(default="Staging", description="Stage for the model (Staging/Production)")

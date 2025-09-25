@@ -15,7 +15,7 @@ import os
 from typing import Dict, Any
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, get_current_context
 from airflow.operators.bash import BashOperator
 from airflow.operators.dummy import DummyOperator
 from airflow.providers.postgres.operators.postgres import PostgresOperator
@@ -58,7 +58,7 @@ default_args = {
 
 # DAG definition
 dag = DAG(
-    'recommendation_training_pipeline',
+    'noblestride_recommendation_training_pipeline',
     default_args=default_args,
     description='Production-grade recommendation model training pipeline',
     schedule_interval='@daily',  # Run daily
@@ -234,7 +234,9 @@ def extract_features(**context) -> Dict[str, Any]:
 
         logger.info(f"Feature extraction completed. Pairs: {len(df_pairs)} saved to {dataset_path}")
         # Push dataset path for training
-        context['task_instance'].xcom_push(key='dataset_path', value=dataset_path)
+        ctx = get_current_context()
+        if ctx and ctx.get('task_instance'):
+            ctx['task_instance'].xcom_push(key='dataset_path', value=dataset_path)
         return {
             "investors": int(investors.shape[0]),
             "deals": int(deals.shape[0]),
@@ -246,15 +248,16 @@ def extract_features(**context) -> Dict[str, Any]:
         logger.error(f"Feature extraction failed: {str(e)}")
         raise
 
-def train_model(**context) -> Dict[str, Any]:
+def train_model() -> Dict[str, Any]:
     """
     Train a text-pair classifier on real pairs using TF-IDF + Logistic Regression.
     """
     try:
         logger.info("Starting model training on real dataset...")
         setup_mlflow()
-        dataset_path = context['task_instance'].xcom_pull(task_ids='feature_engineering.extract_features', key='dataset_path') or \
-                       context['task_instance'].xcom_pull(task_ids='extract_features', key='dataset_path')
+        ctx = get_current_context()
+        dataset_path = ctx['task_instance'].xcom_pull(task_ids='feature_engineering.extract_features', key='dataset_path') or \
+                       ctx['task_instance'].xcom_pull(task_ids='extract_features', key='dataset_path')
         if not dataset_path or not os.path.exists(dataset_path):
             raise RuntimeError(f"Dataset path not found: {dataset_path}")
 
@@ -288,11 +291,10 @@ def train_model(**context) -> Dict[str, Any]:
             mlflow.log_metric("precision", precision)
             mlflow.log_metric("recall", recall)
             mlflow.log_metric("f1_score", f1)
-
+            
             # Log model (pipeline)
             mlflow.sklearn.log_model(pipeline, MODEL_NAME)
-
-            from airflow.operators.python import get_current_context
+            
             ctx = get_current_context()
             if ctx and ctx.get('task_instance'):
                 run_id = mlflow.active_run().info.run_id
@@ -316,7 +318,7 @@ def train_model(**context) -> Dict[str, Any]:
 
 from airflow.exceptions import AirflowSkipException
 
-def evaluate_model(**context) -> bool:
+def evaluate_model() -> bool:
     """
     Evaluate the trained model
     
@@ -327,7 +329,8 @@ def evaluate_model(**context) -> bool:
         logger.info("Starting model evaluation...")
         
         # Get training results from XCom
-        training_stats = context['task_instance'].xcom_pull(task_ids='train_model')
+        ctx = get_current_context()
+        training_stats = ctx['task_instance'].xcom_pull(task_ids='train_model')
         
         # Define quality thresholds
         MIN_ACCURACY = 0.75
@@ -354,7 +357,7 @@ def evaluate_model(**context) -> bool:
         logger.error(f"Model evaluation failed: {str(e)}")
         raise
 
-def deploy_model(**context) -> Dict[str, Any]:
+def deploy_model() -> Dict[str, Any]:
     """
     Deploy the model to production
     
@@ -366,7 +369,6 @@ def deploy_model(**context) -> Dict[str, Any]:
         setup_mlflow()
         
         # Register model in MLflow Model Registry using run_id from XCom
-        from airflow.operators.python import get_current_context
         ctx = get_current_context()
         run_id = None
         if ctx and ctx.get('task_instance'):
@@ -403,11 +405,12 @@ def deploy_model(**context) -> Dict[str, Any]:
         logger.error(f"Model deployment failed: {str(e)}")
         raise
 
-def send_notification(**context):
+def send_notification():
     """Send notification about pipeline completion"""
     try:
-        deployment_info = context['task_instance'].xcom_pull(task_ids='deploy_model')
-        training_stats = context['task_instance'].xcom_pull(task_ids='train_model')
+        ctx = get_current_context()
+        deployment_info = ctx['task_instance'].xcom_pull(task_ids='deploy_model')
+        training_stats = ctx['task_instance'].xcom_pull(task_ids='train_model')
         
         message = f"""
         🎉 Recommendation Model Training Pipeline Completed Successfully!
@@ -443,7 +446,6 @@ with TaskGroup("data_quality_checks", dag=dag) as data_quality_group:
         task_id='validate_data_quality',
         python_callable=validate_data_quality,
         dag=dag,
-        provide_context=True,
     )
 
 # Feature Engineering Task Group
@@ -452,7 +454,6 @@ with TaskGroup("feature_engineering", dag=dag) as feature_group:
         task_id='extract_features',
         python_callable=extract_features,
         dag=dag,
-        provide_context=True,
     )
 
 # Model Training Task Group
@@ -461,14 +462,12 @@ with TaskGroup("model_training", dag=dag) as training_group:
         task_id='train_model',
         python_callable=train_model,
         dag=dag,
-        provide_context=True,
     )
     
     evaluate_model_task = PythonOperator(
         task_id='evaluate_model',
         python_callable=evaluate_model,
         dag=dag,
-        provide_context=True,
     )
 
 # Model Deployment Task Group
@@ -477,14 +476,12 @@ with TaskGroup("model_deployment", dag=dag) as deployment_group:
         task_id='deploy_model',
         python_callable=deploy_model,
         dag=dag,
-        provide_context=True,
     )
     
     notify_completion = PythonOperator(
         task_id='send_notification',
         python_callable=send_notification,
         dag=dag,
-        provide_context=True,
     )
 
 end_pipeline = DummyOperator(

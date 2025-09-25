@@ -1,5 +1,5 @@
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.operators.python import PythonOperator, get_current_context
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.providers.http.hooks.http import HttpHook
 from airflow.models import Variable
@@ -20,9 +20,10 @@ default_args = {
     "email": ["k.kamau@webmasters.co.ke"],
 }
 
-def check_services_health(**context):
+def check_services_health():
     """Check if both Node.js and FastAPI services are healthy"""
     try:
+        ctx = get_current_context()
         nodejs_base_url = Variable.get("NODEJS_BASE_URL", default_var="http://host.docker.internal:3030")
         fastapi_base_url = Variable.get("FASTAPI_BASE_URL", default_var="http://host.docker.internal:8010")
         
@@ -47,7 +48,7 @@ def check_services_health(**context):
         }
         
         logger.info(f"🏥 Service Health Report: {health_report}")
-        context["ti"].xcom_push(key="health_report", value=health_report)
+        ctx["ti"].xcom_push(key="health_report", value=health_report)
         
         # Only proceed if at least one service is healthy
         if nodejs_status == "healthy" or fastapi_status == "healthy":
@@ -60,11 +61,12 @@ def check_services_health(**context):
         raise
 
 
-def extract_noblestride_data(**context):
+def extract_noblestride_data():
     """Extract data from the noblestride PostgreSQL database"""
     hook = PostgresHook(postgres_conn_id="noblestride_postgres")
     
     try:
+        ctx = get_current_context()
         conn = hook.get_conn()
         cursor = conn.cursor()
         
@@ -89,8 +91,8 @@ def extract_noblestride_data(**context):
                 table_counts[table] = "error"
         
         # Push data to XCom
-        context["ti"].xcom_push(key="table_counts", value=table_counts)
-        context["ti"].xcom_push(key="total_tables", value=len(tables))
+        ctx["ti"].xcom_push(key="table_counts", value=table_counts)
+        ctx["ti"].xcom_push(key="total_tables", value=len(tables))
         
         logger.info(f"📊 Database Summary: {len(tables)} tables found")
         for table, count in table_counts.items():
@@ -104,11 +106,12 @@ def extract_noblestride_data(**context):
         raise
 
 
-def sync_with_fastapi(**context):
+def sync_with_fastapi():
     """Send data summary to FastAPI service"""
     try:
-        health_report = context["ti"].xcom_pull(key="health_report", task_ids="check_services")
-        table_counts = context["ti"].xcom_pull(key="table_counts", task_ids="extract_data")
+        ctx = get_current_context()
+        health_report = ctx["ti"].xcom_pull(key="health_report", task_ids="check_services")
+        table_counts = ctx["ti"].xcom_pull(key="table_counts", task_ids="extract_data")
         
         if health_report.get("fastapi_service") != "healthy":
             logger.warning("⚠️ FastAPI service is not healthy, skipping sync")
@@ -138,25 +141,26 @@ def sync_with_fastapi(**context):
         except requests.exceptions.RequestException as e:
             logger.warning(f"⚠️ Could not sync with FastAPI: {e}")
         
-        context["ti"].xcom_push(key="sync_result", value=sync_data)
+        ctx["ti"].xcom_push(key="sync_result", value=sync_data)
         
     except Exception as e:
         logger.error(f"❌ FastAPI sync failed: {str(e)}")
         raise
 
 
-def generate_report(**context):
+def generate_report():
     """Generate a comprehensive report of the integration"""
     try:
-        health_report = context["ti"].xcom_pull(key="health_report", task_ids="check_services")
-        table_counts = context["ti"].xcom_pull(key="table_counts", task_ids="extract_data")
-        sync_result = context["ti"].xcom_pull(key="sync_result", task_ids="sync_fastapi")
+        ctx = get_current_context()
+        health_report = ctx["ti"].xcom_pull(key="health_report", task_ids="check_services")
+        table_counts = ctx["ti"].xcom_pull(key="table_counts", task_ids="extract_data")
+        sync_result = ctx["ti"].xcom_pull(key="sync_result", task_ids="sync_fastapi")
         
         report = {
             "pipeline_execution": {
                 "dag_id": "noblestride_integration_pipeline",
-                "execution_date": context["execution_date"].isoformat(),
-                "run_id": context["run_id"]
+                "execution_date": ctx["execution_date"].isoformat(),
+                "run_id": ctx["run_id"]
             },
             "services_health": health_report,
             "database_summary": {
@@ -204,14 +208,12 @@ with DAG(
     health_check = PythonOperator(
         task_id="check_services",
         python_callable=check_services_health,
-        provide_context=True,
     )
 
     # Task 2: Extract data from database
     extract_data = PythonOperator(
         task_id="extract_data",
         python_callable=extract_noblestride_data,
-        provide_context=True,
         pool="ml_training_pool",
     )
 
@@ -219,14 +221,12 @@ with DAG(
     sync_fastapi = PythonOperator(
         task_id="sync_fastapi",
         python_callable=sync_with_fastapi,
-        provide_context=True,
     )
 
     # Task 4: Generate integration report
     generate_integration_report = PythonOperator(
         task_id="generate_report",
         python_callable=generate_report,
-        provide_context=True,
     )
 
     # Set up task dependencies

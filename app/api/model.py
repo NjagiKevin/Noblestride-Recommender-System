@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
+from pydantic import ConfigDict
 from datetime import datetime
 from typing import Dict, Any, Optional
 import logging
@@ -11,12 +12,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/model", tags=["model"])
 
 class ModelTrainingComplete(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     model_type: str
     training_samples: int
     training_timestamp: str
     model_version: str
 
 class ModelStatus(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     status: str
     current_model_version: Optional[str] = None
     last_training: Optional[str] = None
