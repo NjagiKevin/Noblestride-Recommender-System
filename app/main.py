@@ -24,7 +24,10 @@ app = FastAPI(
 # Startup event to initialize database
 @app.on_event("startup")
 def on_startup():
-    init_db()  # this will call Base.metadata.create_all(bind=engine)
+    try:
+        init_db()  # this will call Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.warning("DB init skipped at startup: %s", e)
 
 # Global exception handlers for robustness
 @app.exception_handler(Exception)
@@ -56,5 +59,8 @@ def ready():
     except Exception:
         return JSONResponse(status_code=503, content={"status": "not_ready"})
 
-# create tables if they don’t exist
-Base.metadata.create_all(bind=engine)
+# create tables if they don’t exist (best-effort at import time)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    logger.warning("Deferred table creation: %s", e)
